@@ -1,4 +1,4 @@
-﻿@font-face {
+﻿/*@font-face {
     font-family: 'source_sans_proextralight';
     src: url("../../font/bbt-com/sourcesanspro-extralight-webfont.eot");
     src: url("../../font/bbt-com/sourcesanspro-extralight-webfont.eot?#iefix") format("embedded-opentype"), url("../../font/bbt-com/sourcesanspro-extralight-webfont.woff") format("woff"), url("../../font/bbt-com/sourcesanspro-extralight-webfont.ttf") format("truetype"), url("../../font/bbt-com/sourcesanspro-extralight-webfont.svg#source_sans_proextralight") format("svg");
@@ -84,6 +84,11 @@
     src: url("../../font/bbt-com/Oswald-Light-webfont.eot?#iefix") format("embedded-opentype"), url("../../font/bbt-com/Oswald-Light-webfont.woff") format("woff"), url("../../font/bbt-com/Oswald-Light-webfont.ttf") format("truetype"), url("../../font/bbt-com/Oswald-Light-webfont.svg#Oswald") format("svg");
     font-weight: normal;
     font-style: normal
+}
+/**/
+#ls-row-3 {
+    max-width: 970px;
+    margin: 0 auto;
 }
 
 .clearfix {
@@ -191,7 +196,7 @@
     margin: 0 !important;
     padding: 0 !important
 }
-
+/*
 @font-face {
     font-family: 'bbtdotcom-icons';
     src: url("../../font/bbt-com/bbtdotcom-icons.eot?59426605");
@@ -199,7 +204,7 @@
     font-weight: normal;
     font-style: normal
 }
-
+   */
 [class^="icon-"]:before, [class*=" icon-"]:before {
     font-family: "bbtdotcom-icons";
     font-style: normal;
@@ -1091,7 +1096,7 @@ a.logo {
 }
 
 a.logo {
-    background: url(../../img/bbt-com/icons/bbt-logo.png);
+    background: url(./bbt-logo.png);
     background-size: 68px 68px
 }
 
