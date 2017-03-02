@@ -1496,6 +1496,7 @@
     <div id='urn:app:bbt:fund-research'>
         Fund Research Widget
     </div>
+    <a id="back-to-company-research">back to Company Research</a>
     <script type="text/javascript">
         (function () {
             var viewerBaseUrl = 'https://www.appsngen.com/viewer';
@@ -1566,19 +1567,25 @@
             };
 
             ensureAppsNgenApiLoaded(function (error) {
+                var fundResearch = document.getElementById('fund-research');
+                var companyResearch = document.getElementById('company-research');
+                var backLink = document.getElementById('back-to-company-research');
+
                 if (error) {
                     window.console.error(error);
                 } else {
                     apiLoaded = true;
 
                     appsngen.events.subscribe('SINGLE_INSTRUMENT', function (event, data) {
-                        var fundResearch = document.getElementById('fund-research');
-                        var companyResearch = document.getElementById('company-research');
-
                         if (data.assetType && data.assetType.toUpperCase() === 'FUND') {
                             companyResearch.style.display = 'none';
                             fundResearch.style.display = 'block';
                         }
+                    });
+
+                    backLink.addEventListener('click', function () {
+                        companyResearch.style.display = 'block';
+                        fundResearch.style.display = 'none';
                     });
                 }
             });

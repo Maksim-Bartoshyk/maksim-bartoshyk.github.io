@@ -93,6 +93,12 @@
     margin: 100px;
 }
 
+#fund-research a {
+    font-size : 15px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 #ls-row-3 {
     max-width: 970px;
     margin: 0 auto;
@@ -203,6 +209,7 @@
     margin: 0 !important;
     padding: 0 !important
 }
+
 /*
 @font-face {
     font-family: 'bbtdotcom-icons';
@@ -12510,7 +12517,7 @@ header.component h1, header.component h2, header.component h3, header.component 
     display: block
 }
 
-.listing-wrapper.horizontal .listing-container article .listing-content> {
+.listing-wrapper.horizontal .listing-container article .listing-content>  {
     margin: 0px
 }
 
