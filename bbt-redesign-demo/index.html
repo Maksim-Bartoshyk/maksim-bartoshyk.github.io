@@ -1245,7 +1245,7 @@
 
 
 
-
+<div id="company-research">
 <div id='urn:app:bbt:company-research'></div>
 <script type="text/javascript">
 (function () {
@@ -1487,8 +1487,104 @@
     });
 }());
 </script>
+</div>
 
 
+
+
+<div id="fund-research" style="display: none;">
+    <div id='urn:app:bbt:fund-research'>
+        Fund Research Widget
+    </div>
+    <script type="text/javascript">
+        (function () {
+            var viewerBaseUrl = 'https://www.appsngen.com/viewer';
+            var apiLoaded = false;
+
+            var addScriptLoadHandler = function (scriptElement, callback) {
+                var scriptIsLoaded = false;
+                var previousHandler = scriptElement.onload;
+
+                // IE8 hack
+                scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = function () {
+                    if (!scriptIsLoaded && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete")) {
+                        scriptIsLoaded = true;
+
+                        if (previousHandler) {
+                            previousHandler.call(scriptElement);
+                        }
+
+                        callback.call(scriptElement);
+
+                        // IE8 memory leak fix
+                        scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = null;
+                    }
+                };
+            };
+
+            var createScript = function (callback) {
+                var scriptId = 'appsngen-container-api';
+                var scriptElement;
+
+                scriptElement = document.getElementById(scriptId);
+                if (scriptElement) {
+                    if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                        callback();
+                    } else {
+                        addScriptLoadHandler(scriptElement, function () {
+                            callback();
+                        });
+                    }
+                } else {
+                    scriptElement = document.createElement('script');
+                    scriptElement.src = viewerBaseUrl + '/content/js/appsngen.container.api.js';
+                    scriptElement.setAttribute('id', scriptId);
+                    addScriptLoadHandler(scriptElement, function () {
+                        callback();
+                    });
+
+                    document.body.appendChild(scriptElement);
+                }
+            };
+
+            var ensureAppsNgenApiLoaded = function (callback) {
+                if (window.appsngen && window.appsngen.apiVersion === 'widget') {
+                    window.appsngen.ready(function () {
+                        callback();
+                    });
+                } else if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                    callback();
+                } else {
+                    createScript(function () {
+                        if (window.appsngen) {
+                            callback();
+                        } else if (window.console && window.console.error) {
+                            callback(new Error(widgetUrn + ': unable to load appsngen api.'));
+                        }
+                    });
+                }
+            };
+
+            ensureAppsNgenApiLoaded(function (error) {
+                if (error) {
+                    window.console.error(error);
+                } else {
+                    apiLoaded = true;
+
+                    appsngen.events.subscribe('SINGLE_INSTRUMENT', function (event, data) {
+                        var fundResearch = document.getElementById('fund-research');
+                        var companyResearch = document.getElementById('company-research');
+
+                        if (data.assetType && data.assetType.toUpperCase() === 'FUND') {
+                            companyResearch.style.display = 'none';
+                            fundResearch.style.display = 'block';
+                        }
+                    });
+                }
+            });
+        }());
+    </script>
+</div>
 
 
 
@@ -1755,9 +1851,6 @@
         </h2>
     </div>
 </nav>
-<script type="text/javascript">
-    $(".ending-disclose").css("display", "none");
-</script>
 <p>©&nbsp;
     <script type="text/javascript">document.write(new Date().getFullYear());</script>
     2017, Branch Banking and Trust Company. All Rights Reserved.

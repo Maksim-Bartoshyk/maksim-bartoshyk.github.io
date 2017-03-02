@@ -86,6 +86,13 @@
     font-style: normal
 }
 /**/
+
+#fund-research {
+    text-align: center;
+    font-size: 30px;
+    margin: 100px;
+}
+
 #ls-row-3 {
     max-width: 970px;
     margin: 0 auto;
