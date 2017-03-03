@@ -16135,9 +16135,14 @@ header.component h1, header.component h2, header.component h3, header.component 
     }
 }
 
-div#ls-row-3:first-child {
+div#ls-row-3 div {
     max-width: 75%;
     margin: 0 auto;
+}
+
+div#ls-row-3 div#company-research, div#ls-row-3 div#fund-research {
+    max-width: none;
+    margin: 0;
 }
 
 /*# sourceMappingURL=bbt-combined.css.map */
