@@ -16135,7 +16135,7 @@ header.component h1, header.component h2, header.component h3, header.component 
     }
 }
 
-#ls-row-3 div:first-child {
+div#ls-row-3:first-child {
     max-width: 75%;
     margin: 0 auto;
 }
