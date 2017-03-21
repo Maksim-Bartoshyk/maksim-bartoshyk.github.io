@@ -997,843 +997,833 @@
 </div>
 <div class="ls-row" id="ls-row-3">
 
-
-<div id='urn:app:bbt:ngn-widget-market-trends'></div>
-<script id="market-trends-integration" type="text/javascript">
-(function () {
-    var viewerBaseUrl = 'https://cdn.appsngen.com/viewer';
-    var accessToken = 'eyJhbGciOiJTSEExd2l0aFJTQSIsInR5cCI6IkpPU0UiLCJjdHkiOiJqc29uIiwieDV0IjoiYU1ZY1ZjdW9MSjc2dk5xYXBrQXFINDVuNmJBPSJ9.eyJpc3MiOiJhcHBzbmdlbiIsInN1YiI6IndpZGdldDp1cm46YXBwOmJidDpuZ24td2lkZ2V0LW1hcmtldC10cmVuZHMiLCJleHAiOjE4MDM5OTg4NjQzNzMsImlhdCI6MTQ4ODQ2NjExMjE5NCwianRpIjoiNjQ0NjkyOWItN2I4Mi00NjBkLWEzM2QtNDZjYjg2MzMxN2Y5IiwiYXVkIjp7InVzZXIiOiJkZXZlbG9wZXJAYmJ0LmNvbSIsIm9yZ2FuaXphdGlvbiI6InVybjpvcmc6YmJ0IiwidXNlclJvbGVzIjpbIlJPTEVfREVWRUxPUEVSIl0sImRvbWFpbnMiOlsiLy8qLmFwcHNuZ2VuLmNvbSIsIi8vbWFrc2ltLWJhcnRvc2h5ay5naXRodWIuaW8iXX0sInR5cCI6ImF0In0=.dtLlnVCBzR4ThP9GaHQ9lTLaT+gogbpZJ5/lAadFk6m6JHRfNaM2tfOPM0wNdlqh5qM4o8DpNKW3RPz0U9mEnMrp53QqQurfVJQ0jMDkJcIeaiQ9697o7v6EneY5awZf4z9s1OKoAmZp637uQ0f4cFfmrawcFScAb1HUKGfrXpA=';
-    var integrationTag = 'bbt-redesign-demo';
-    var widgetVersion = ''; // will be resolved by xhr request
-    var widgetUrn = 'urn:app:bbt:ngn-widget-market-trends';
-    var widgetName = 'Market Trends';
-    var widgetPreferences = {};
-    var frameSettings = {
-        width: '100%',
-        height: '480px',
-        frameborder: '0',
-        scrolling: 'no'
-    };
-    var apiLoaded = false;
-    var versionResolved = false;
-    var useIframeInsteadOfXhr = window.XDomainRequest !== undefined; // IE8-9
-
-    var createWidgetFrame = function () {
-        var div, preferenceName;
-        var divId = widgetUrn + '-' + appsngen.util.guid();
-        var frameName = widgetName + '-' + appsngen.util.guid();
-        var location = window.location;
-        var parent = location.protocol + '//' + location.host;
-        var url = viewerBaseUrl + '/content/widgets/' +
-                encodeURIComponent(widgetUrn) + '/' + encodeURIComponent(widgetVersion) + '/index.html' +
-                '?token=' + encodeURIComponent(accessToken) +
-                '&parent=' + encodeURIComponent(parent);
-
-        for (preferenceName in widgetPreferences) {
-            if (widgetPreferences.hasOwnProperty(preferenceName)) {
-                url += '&X_' + encodeURIComponent(preferenceName) +
-                        '=' + encodeURIComponent(widgetPreferences[preferenceName]);
-            }
-        }
-
-        div = document.getElementById(widgetUrn);
-        div.setAttribute('id', divId);
-        window.appsngen.addApplication(frameName, divId, frameSettings, url);
-    };
-
-    var addScriptLoadHandler = function (scriptElement, callback) {
-        var scriptIsLoaded = false;
-        var previousHandler = scriptElement.onload;
-
-        // IE8 hack
-        scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = function () {
-            if (!scriptIsLoaded && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete")) {
-                scriptIsLoaded = true;
-
-                if (previousHandler) {
-                    previousHandler.call(scriptElement);
-                }
-
-                callback.call(scriptElement);
-
-                // IE8 memory leak fix
-                scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = null;
-            }
-        };
-    };
-
-    var createScript = function (callback) {
-        var scriptId = 'appsngen-container-api';
-        var scriptElement;
-
-        scriptElement = document.getElementById(scriptId);
-        if (scriptElement) {
-            if (window.appsngen && window.appsngen.apiVersion === 'container') {
-                callback();
-            } else {
-                addScriptLoadHandler(scriptElement, function () {
-                    callback();
-                });
-            }
-        } else {
-            scriptElement = document.createElement('script');
-            scriptElement.src = viewerBaseUrl + '/content/js/appsngen.container.api.js';
-            scriptElement.setAttribute('id', scriptId);
-            addScriptLoadHandler(scriptElement, function () {
-                callback();
-            });
-
-            document.body.appendChild(scriptElement);
-        }
-    };
-
-    var ensureAppsNgenApiLoaded = function (callback) {
-        if (window.appsngen && window.appsngen.apiVersion === 'widget') {
-            window.appsngen.ready(function () {
-                callback();
-            });
-        } else if (window.appsngen && window.appsngen.apiVersion === 'container') {
-            callback();
-        } else {
-            createScript(function () {
-                if (window.appsngen) {
-                    callback();
-                } else if (window.console && window.console.error) {
-                    callback(new Error(widgetUrn + ': unable to load appsngen api.'));
-                }
-            });
-        }
-    };
-
-    var resolveWidgetVersionWithXhr = function (callback) {
-        var xhr = new XMLHttpRequest();
-        var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
-                encodeURIComponent(widgetUrn) + '/tags/' + integrationTag;
-
-        var processResponse = function (status, responseText) {
-            var response;
-
-            if (status !== 200) {
-                callback(new Error(widgetUrn + ': ' +
-                        'expected 200 status during widget version request but got ' + status +
-                        ' with response: "' + responseText + '".'));
-            } else {
-                try {
-                    response = JSON.parse(responseText);
-                } catch (e) {
-                    callback(new Error(widgetUrn + ': ' +
-                            'unable to parse widget version response: "' + responseText + '".'));
-                }
-
-                callback(null, response.widgetVersion);
-            }
-        };
-
-        if (!integrationTag) {
-            callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
-            return;
-        }
-
-        xhr.open('GET', tagUrl, true);
-        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('Accept', 'application/json');
-
-        if (xhr.addEventListener) {
-            xhr.addEventListener('load', function (event) {
-                processResponse(event.target.status, event.target.response || event.target.responseText/*IE9 FIX*/);
-            }, false);
-        } else {
-            xhr.onreadystatechange = function () {
-                /*IE7,8,9 FIX (handler called on .abort() with zero status)*/
-                if (xhr.readyState === 4 && xhr.status !== 0) {
-                    processResponse(xhr.status, xhr.responseText);
-                }
+<!-- market trends section -->
+<div>
+    <div id='urn:app:bbt:ngn-widget-market-trends'></div>
+    <script id="market-trends-integration" type="text/javascript">
+        (function () {
+            var viewerBaseUrl = 'https://cdn.appsngen.com/viewer';
+            var accessToken = 'eyJhbGciOiJTSEExd2l0aFJTQSIsInR5cCI6IkpPU0UiLCJjdHkiOiJqc29uIiwieDV0IjoiYU1ZY1ZjdW9MSjc2dk5xYXBrQXFINDVuNmJBPSJ9.eyJpc3MiOiJhcHBzbmdlbiIsInN1YiI6IndpZGdldDp1cm46YXBwOmJidDpuZ24td2lkZ2V0LW1hcmtldC10cmVuZHMiLCJleHAiOjE4MDM5OTg4NjQzNzMsImlhdCI6MTQ4ODQ2NjExMjE5NCwianRpIjoiNjQ0NjkyOWItN2I4Mi00NjBkLWEzM2QtNDZjYjg2MzMxN2Y5IiwiYXVkIjp7InVzZXIiOiJkZXZlbG9wZXJAYmJ0LmNvbSIsIm9yZ2FuaXphdGlvbiI6InVybjpvcmc6YmJ0IiwidXNlclJvbGVzIjpbIlJPTEVfREVWRUxPUEVSIl0sImRvbWFpbnMiOlsiLy8qLmFwcHNuZ2VuLmNvbSIsIi8vbWFrc2ltLWJhcnRvc2h5ay5naXRodWIuaW8iXX0sInR5cCI6ImF0In0=.dtLlnVCBzR4ThP9GaHQ9lTLaT+gogbpZJ5/lAadFk6m6JHRfNaM2tfOPM0wNdlqh5qM4o8DpNKW3RPz0U9mEnMrp53QqQurfVJQ0jMDkJcIeaiQ9697o7v6EneY5awZf4z9s1OKoAmZp637uQ0f4cFfmrawcFScAb1HUKGfrXpA=';
+            var integrationTag = 'bbt-redesign-demo';
+            var widgetVersion = ''; // will be resolved by xhr request
+            var widgetUrn = 'urn:app:bbt:ngn-widget-market-trends';
+            var widgetName = 'Market Trends';
+            var widgetPreferences = {};
+            var frameSettings = {
+                width: '100%',
+                height: '480px',
+                frameborder: '0',
+                scrolling: 'no'
             };
-        }
-
-        xhr.send();
-    };
-
-    var resolveWidgetVersionWithIFrame = function (callback) {
-        var frame = document.createElement('iframe');
-        var location = window.location;
-        var parent = location.protocol + '//' + location.host;
-        var messagePrefix = 'appsngen-tag-resolution-' + Math.random();
-        var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
-                encodeURIComponent(widgetUrn) + '/tags/' + integrationTag + '/iframe' +
-                '?messagePrefix=' + encodeURIComponent(messagePrefix) +
-                '&parentUrl=' + encodeURIComponent(parent) +
-                '&token=' + encodeURIComponent(accessToken);
-
-        var processMessage = function (event) {
-            var response, responseText;
-
-            if (!event.data || typeof event.data !== 'string' || event.data.indexOf(messagePrefix) !== 0) {
-                return;
-            }
-
-            try {
-                responseText = event.data.replace(messagePrefix, '');
-                response = JSON.parse(responseText);
-            } catch (e) {
-                callback(new Error(widgetUrn + ': ' +
-                        'unable to parse widget version message: "' + event.data + '".'));
-            }
-
-            callback(null, response.widgetVersion);
-        };
-
-        if (!integrationTag) {
-            callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
-            return;
-        }
-
-        frame.src = tagUrl;
-        frame.style.display = 'none';
-
-        if (window.addEventListener) {
-            window.addEventListener('message', function (event) {
-                processMessage(event);
-            }, false);
-        } else {
-            window.attachEvent('onmessage', function (event) {
-                processMessage(event);
-            });
-        }
-
-        document.body.appendChild(frame);
-    };
-
-    var resolveWidgetVersion = function (callback) {
-        if (useIframeInsteadOfXhr) {
-            resolveWidgetVersionWithIFrame(callback);
-        } else {
-            resolveWidgetVersionWithXhr(callback);
-        }
-    };
-
-    resolveWidgetVersion(function (error, version) {
-        if (error) {
-            window.console.error(error);
-        } else {
-            versionResolved = true;
-            widgetVersion = version;
-
-            if (apiLoaded) {
-                createWidgetFrame();
-            }
-        }
-    });
-
-    ensureAppsNgenApiLoaded(function (error) {
-        if (error) {
-            window.console.error(error);
-        } else {
-            apiLoaded = true;
-
-            if (versionResolved) {
-                createWidgetFrame();
-            }
-        }
-    });
-}());
-</script>
-
-
-
-
-
-
-<div id="company-research-container">
-<div id="urn:app:bbt:company-research"></div>
-<script id="company-research-integration" type="text/javascript">
-(function () {
-    var viewerBaseUrl = 'https://cdn.appsngen.com/viewer';
-    var accessToken = 'eyJhbGciOiJTSEExd2l0aFJTQSIsInR5cCI6IkpPU0UiLCJjdHkiOiJqc29uIiwieDV0IjoiYU1ZY1ZjdW9MSjc2dk5xYXBrQXFINDVuNmJBPSJ9.eyJpc3MiOiJhcHBzbmdlbiIsInN1YiI6IndpZGdldDp1cm46YXBwOmJidDpjb21wYW55LXJlc2VhcmNoIiwiZXhwIjoxODAzOTk4MzU3OTI3LCJpYXQiOjE0ODg0NjU3NDUxNzEsImp0aSI6IjkyY2U2NTc0LTY0MmItNGY2Ny05OWQ5LTcyZjM5Njg5N2I3ZCIsImF1ZCI6eyJ1c2VyIjoiZGV2ZWxvcGVyQGJidC5jb20iLCJvcmdhbml6YXRpb24iOiJ1cm46b3JnOmJidCIsInVzZXJSb2xlcyI6WyJST0xFX0RFVkVMT1BFUiJdLCJkb21haW5zIjpbIi8vKi5hcHBzbmdlbi5jb20iLCIvL21ha3NpbS1iYXJ0b3NoeWsuZ2l0aHViLmlvIl19LCJ0eXAiOiJhdCJ9.hDXR9K+9x+3LBeP7q0Ij7rtsfWFg0MKrXzVFvxzt0RPEUPt399s3kmxrEcyCWBmne/3tfl8+pt4o9rSy3J9RvocAoA6kVh8rRlIYptiCDWibYPEfNkG9GLgcmnMioz7HEO55xPbprtCkYa2YS5otPeO5Uh0/tXdoMCTDEkCNr2o=';
-    var integrationTag = 'bbt-redesign-demo';
-    var widgetVersion = ''; // will be resolved by xhr request
-    var widgetUrn = 'urn:app:bbt:company-research';
-    var widgetName = 'Company Research';
-    var widgetPreferences = {"ric":"BBT.N"};
-    var frameSettings = {
-        width: '100%',
-        height: '900px',
-        frameborder: '0',
-        scrolling: 'no'
-    };
-    var apiLoaded = false;
-    var versionResolved = false;
-    var useIframeInsteadOfXhr = window.XDomainRequest !== undefined; // IE8-9
-
-    var createWidgetFrame = function () {
-        var div, preferenceName;
-        var divId = widgetUrn + '-' + appsngen.util.guid();
-        var frameName = widgetName + '-' + appsngen.util.guid();
-        var location = window.location;
-        var parent = location.protocol + '//' + location.host;
-        var url = viewerBaseUrl + '/content/widgets/' +
-                encodeURIComponent(widgetUrn) + '/' + encodeURIComponent(widgetVersion) + '/index.html' +
-                '?token=' + encodeURIComponent(accessToken) +
-                '&parent=' + encodeURIComponent(parent);
-
-        for (preferenceName in widgetPreferences) {
-            if (widgetPreferences.hasOwnProperty(preferenceName)) {
-                url += '&X_' + encodeURIComponent(preferenceName) +
-                        '=' + encodeURIComponent(widgetPreferences[preferenceName]);
-            }
-        }
-
-        div = document.getElementById(widgetUrn);
-        div.setAttribute('id', divId);
-        window.appsngen.addApplication(frameName, divId, frameSettings, url);
-    };
-
-    var addScriptLoadHandler = function (scriptElement, callback) {
-        var scriptIsLoaded = false;
-        var previousHandler = scriptElement.onload;
-
-        // IE8 hack
-        scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = function () {
-            if (!scriptIsLoaded && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete")) {
-                scriptIsLoaded = true;
-
-                if (previousHandler) {
-                    previousHandler.call(scriptElement);
-                }
-
-                callback.call(scriptElement);
-
-                // IE8 memory leak fix
-                scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = null;
-            }
-        };
-    };
-
-    var createScript = function (callback) {
-        var scriptId = 'appsngen-container-api';
-        var scriptElement;
-
-        scriptElement = document.getElementById(scriptId);
-        if (scriptElement) {
-            if (window.appsngen && window.appsngen.apiVersion === 'container') {
-                callback();
-            } else {
-                addScriptLoadHandler(scriptElement, function () {
-                    callback();
-                });
-            }
-        } else {
-            scriptElement = document.createElement('script');
-            scriptElement.src = viewerBaseUrl + '/content/js/appsngen.container.api.js';
-            scriptElement.setAttribute('id', scriptId);
-            addScriptLoadHandler(scriptElement, function () {
-                callback();
-            });
-
-            document.body.appendChild(scriptElement);
-        }
-    };
-
-    var ensureAppsNgenApiLoaded = function (callback) {
-        if (window.appsngen && window.appsngen.apiVersion === 'widget') {
-            window.appsngen.ready(function () {
-                callback();
-            });
-        } else if (window.appsngen && window.appsngen.apiVersion === 'container') {
-            callback();
-        } else {
-            createScript(function () {
-                if (window.appsngen) {
-                    callback();
-                } else if (window.console && window.console.error) {
-                    callback(new Error(widgetUrn + ': unable to load appsngen api.'));
-                }
-            });
-        }
-    };
-
-    var resolveWidgetVersionWithXhr = function (callback) {
-        var xhr = new XMLHttpRequest();
-        var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
-                encodeURIComponent(widgetUrn) + '/tags/' + integrationTag;
-
-        var processResponse = function (status, responseText) {
-            var response;
-
-            if (status !== 200) {
-                callback(new Error(widgetUrn + ': ' +
-                        'expected 200 status during widget version request but got ' + status +
-                        ' with response: "' + responseText + '".'));
-            } else {
-                try {
-                    response = JSON.parse(responseText);
-                } catch (e) {
-                    callback(new Error(widgetUrn + ': ' +
-                            'unable to parse widget version response: "' + responseText + '".'));
-                }
-
-                callback(null, response.widgetVersion);
-            }
-        };
-
-        if (!integrationTag) {
-            callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
-            return;
-        }
-
-        xhr.open('GET', tagUrl, true);
-        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('Accept', 'application/json');
-
-        if (xhr.addEventListener) {
-            xhr.addEventListener('load', function (event) {
-                processResponse(event.target.status, event.target.response || event.target.responseText/*IE9 FIX*/);
-            }, false);
-        } else {
-            xhr.onreadystatechange = function () {
-                /*IE7,8,9 FIX (handler called on .abort() with zero status)*/
-                if (xhr.readyState === 4 && xhr.status !== 0) {
-                    processResponse(xhr.status, xhr.responseText);
-                }
-            };
-        }
-
-        xhr.send();
-    };
-
-    var resolveWidgetVersionWithIFrame = function (callback) {
-        var frame = document.createElement('iframe');
-        var location = window.location;
-        var parent = location.protocol + '//' + location.host;
-        var messagePrefix = 'appsngen-tag-resolution-' + Math.random();
-        var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
-                encodeURIComponent(widgetUrn) + '/tags/' + integrationTag + '/iframe' +
-                '?messagePrefix=' + encodeURIComponent(messagePrefix) +
-                '&parentUrl=' + encodeURIComponent(parent) +
-                '&token=' + encodeURIComponent(accessToken);
-
-        var processMessage = function (event) {
-            var response, responseText;
-
-            if (!event.data || typeof event.data !== 'string' || event.data.indexOf(messagePrefix) !== 0) {
-                return;
-            }
-
-            try {
-                responseText = event.data.replace(messagePrefix, '');
-                response = JSON.parse(responseText);
-            } catch (e) {
-                callback(new Error(widgetUrn + ': ' +
-                        'unable to parse widget version message: "' + event.data + '".'));
-            }
-
-            callback(null, response.widgetVersion);
-        };
-
-        if (!integrationTag) {
-            callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
-            return;
-        }
-
-        frame.src = tagUrl;
-        frame.style.display = 'none';
-
-        if (window.addEventListener) {
-            window.addEventListener('message', function (event) {
-                processMessage(event);
-            }, false);
-        } else {
-            window.attachEvent('onmessage', function (event) {
-                processMessage(event);
-            });
-        }
-
-        document.body.appendChild(frame);
-    };
-
-    var resolveWidgetVersion = function (callback) {
-        if (useIframeInsteadOfXhr) {
-            resolveWidgetVersionWithIFrame(callback);
-        } else {
-            resolveWidgetVersionWithXhr(callback);
-        }
-    };
-
-    resolveWidgetVersion(function (error, version) {
-        if (error) {
-            window.console.error(error);
-        } else {
-            versionResolved = true;
-            widgetVersion = version;
-
-            if (apiLoaded) {
-                createWidgetFrame();
-            }
-        }
-    });
-
-    ensureAppsNgenApiLoaded(function (error) {
-        if (error) {
-            window.console.error(error);
-        } else {
-            apiLoaded = true;
-
-            if (versionResolved) {
-                createWidgetFrame();
-            }
-        }
-    });
-}());
-</script>
-</div>
-
-
-
-
-<div id="fund-research-container" style="display: none;">
-    <div id="urn:app:bbt:fund-research"></div>
-    <script id="fund-research-integration" type="text/javascript">
-    (function () {
-        var viewerBaseUrl = 'https://cdn.appsngen.com/viewer';
-        var accessToken = 'eyJhbGciOiJTSEExd2l0aFJTQSIsInR5cCI6IkpPU0UiLCJjdHkiOiJqc29uIiwieDV0IjoiYU1ZY1ZjdW9MSjc2dk5xYXBrQXFINDVuNmJBPSJ9.eyJpc3MiOiJhcHBzbmdlbiIsInN1YiI6IndpZGdldDp1cm46YXBwOmJidDpmdW5kLXJlc2VhcmNoIiwiZXhwIjoxODA1NjM2ODc4MTQyLCJpYXQiOjE0OTAxMDU4MTUyOTgsImp0aSI6IjdhMmJmMDg5LWUyYTEtNDA1Ny1hNmMyLWMzMTY2YTMzNzEwYyIsImF1ZCI6eyJ1c2VyIjoiZGV2ZWxvcGVyQGJidC5jb20iLCJvcmdhbml6YXRpb24iOiJ1cm46b3JnOmJidCIsInVzZXJSb2xlcyI6WyJST0xFX0RFVkVMT1BFUiJdLCJkb21haW5zIjpbImh0dHBzOi8vY2RuLmFwcHNuZ2VuLmNvbS92aWV3ZXIiLCIvL21ha3NpbS1iYXJ0b3NoeWsuZ2l0aHViLmlvIl19LCJ0eXAiOiJhdCJ9.NQJjKbT4Gl4uYYP3djf/1C2fgPSTwdSbqKPM+kVoZesOOFFyZnarPkTygeMPWIA+QtZFouLdrJXtodXJ/D0G8ttv53a1bnSpKZc0FvR/kLd5fmmnkeZR3fTwvStWPYrSYDmshT7b7fQM+Y9NI/z9ozgUgLMIwE+KB6kjCLWQYv0=';
-        var integrationTag = 'bbt-redesign-demo';
-        var widgetVersion = ''; // will be resolved by xhr request
-        var widgetUrn = 'urn:app:bbt:fund-research';
-        var widgetName = 'Company Research';
-        var widgetPreferences = {"lipperId":40099235};
-        var frameSettings = {
-            width: '100%',
-            height: '900px',
-            frameborder: '0',
-            scrolling: 'no'
-        };
-        var apiLoaded = false;
-        var versionResolved = false;
-        var useIframeInsteadOfXhr = window.XDomainRequest !== undefined; // IE8-9
-
-        var createWidgetFrame = function () {
-            var div, preferenceName;
-            var divId = widgetUrn + '-' + appsngen.util.guid();
-            var frameName = widgetName + '-' + appsngen.util.guid();
-            var location = window.location;
-            var parent = location.protocol + '//' + location.host;
-            var url = viewerBaseUrl + '/content/widgets/' +
-                    encodeURIComponent(widgetUrn) + '/' + encodeURIComponent(widgetVersion) + '/index.html' +
-                    '?token=' + encodeURIComponent(accessToken) +
-                    '&parent=' + encodeURIComponent(parent);
-
-            for (preferenceName in widgetPreferences) {
-                if (widgetPreferences.hasOwnProperty(preferenceName)) {
-                    url += '&X_' + encodeURIComponent(preferenceName) +
-                            '=' + encodeURIComponent(widgetPreferences[preferenceName]);
-                }
-            }
-
-            div = document.getElementById(widgetUrn);
-            div.setAttribute('id', divId);
-            window.appsngen.addApplication(frameName, divId, frameSettings, url);
-        };
-
-        var addScriptLoadHandler = function (scriptElement, callback) {
-            var scriptIsLoaded = false;
-            var previousHandler = scriptElement.onload;
-
-            // IE8 hack
-            scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = function () {
-                if (!scriptIsLoaded && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete")) {
-                    scriptIsLoaded = true;
-
-                    if (previousHandler) {
-                        previousHandler.call(scriptElement);
+            var apiLoaded = false;
+            var versionResolved = false;
+            var useIframeInsteadOfXhr = window.XDomainRequest !== undefined; // IE8-9
+
+            var createWidgetFrame = function () {
+                var div, preferenceName;
+                var divId = widgetUrn + '-' + appsngen.util.guid();
+                var frameName = widgetName + '-' + appsngen.util.guid();
+                var location = window.location;
+                var parent = location.protocol + '//' + location.host;
+                var url = viewerBaseUrl + '/content/widgets/' +
+                        encodeURIComponent(widgetUrn) + '/' + encodeURIComponent(widgetVersion) + '/index.html' +
+                        '?token=' + encodeURIComponent(accessToken) +
+                        '&parent=' + encodeURIComponent(parent);
+
+                for (preferenceName in widgetPreferences) {
+                    if (widgetPreferences.hasOwnProperty(preferenceName)) {
+                        url += '&X_' + encodeURIComponent(preferenceName) +
+                                '=' + encodeURIComponent(widgetPreferences[preferenceName]);
                     }
-
-                    callback.call(scriptElement);
-
-                    // IE8 memory leak fix
-                    scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = null;
                 }
+
+                div = document.getElementById(widgetUrn);
+                div.setAttribute('id', divId);
+                window.appsngen.addApplication(frameName, divId, frameSettings, url);
             };
-        };
 
-        var createScript = function (callback) {
-            var scriptId = 'appsngen-container-api';
-            var scriptElement;
+            var addScriptLoadHandler = function (scriptElement, callback) {
+                var scriptIsLoaded = false;
+                var previousHandler = scriptElement.onload;
 
-            scriptElement = document.getElementById(scriptId);
-            if (scriptElement) {
-                if (window.appsngen && window.appsngen.apiVersion === 'container') {
-                    callback();
+                // IE8 hack
+                scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = function () {
+                    if (!scriptIsLoaded && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete")) {
+                        scriptIsLoaded = true;
+
+                        if (previousHandler) {
+                            previousHandler.call(scriptElement);
+                        }
+
+                        callback.call(scriptElement);
+
+                        // IE8 memory leak fix
+                        scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = null;
+                    }
+                };
+            };
+
+            var createScript = function (callback) {
+                var scriptId = 'appsngen-container-api';
+                var scriptElement;
+
+                scriptElement = document.getElementById(scriptId);
+                if (scriptElement) {
+                    if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                        callback();
+                    } else {
+                        addScriptLoadHandler(scriptElement, function () {
+                            callback();
+                        });
+                    }
                 } else {
+                    scriptElement = document.createElement('script');
+                    scriptElement.src = viewerBaseUrl + '/content/js/appsngen.container.api.js';
+                    scriptElement.setAttribute('id', scriptId);
                     addScriptLoadHandler(scriptElement, function () {
                         callback();
                     });
-                }
-            } else {
-                scriptElement = document.createElement('script');
-                scriptElement.src = viewerBaseUrl + '/content/js/appsngen.container.api.js';
-                scriptElement.setAttribute('id', scriptId);
-                addScriptLoadHandler(scriptElement, function () {
-                    callback();
-                });
 
-                document.body.appendChild(scriptElement);
-            }
-        };
-
-        var ensureAppsNgenApiLoaded = function (callback) {
-            if (window.appsngen && window.appsngen.apiVersion === 'widget') {
-                window.appsngen.ready(function () {
-                    callback();
-                });
-            } else if (window.appsngen && window.appsngen.apiVersion === 'container') {
-                callback();
-            } else {
-                createScript(function () {
-                    if (window.appsngen) {
-                        callback();
-                    } else if (window.console && window.console.error) {
-                        callback(new Error(widgetUrn + ': unable to load appsngen api.'));
-                    }
-                });
-            }
-        };
-
-        var resolveWidgetVersionWithXhr = function (callback) {
-            var xhr = new XMLHttpRequest();
-            var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
-                    encodeURIComponent(widgetUrn) + '/tags/' + integrationTag;
-
-            var processResponse = function (status, responseText) {
-                var response;
-
-                if (status !== 200) {
-                    callback(new Error(widgetUrn + ': ' +
-                            'expected 200 status during widget version request but got ' + status +
-                            ' with response: "' + responseText + '".'));
-                } else {
-                    try {
-                        response = JSON.parse(responseText);
-                    } catch (e) {
-                        callback(new Error(widgetUrn + ': ' +
-                                'unable to parse widget version response: "' + responseText + '".'));
-                    }
-
-                    callback(null, response.widgetVersion);
+                    document.body.appendChild(scriptElement);
                 }
             };
 
-            if (!integrationTag) {
-                callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
-                return;
-            }
+            var ensureAppsNgenApiLoaded = function (callback) {
+                if (window.appsngen && window.appsngen.apiVersion === 'widget') {
+                    window.appsngen.ready(function () {
+                        callback();
+                    });
+                } else if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                    callback();
+                } else {
+                    createScript(function () {
+                        if (window.appsngen) {
+                            callback();
+                        } else if (window.console && window.console.error) {
+                            callback(new Error(widgetUrn + ': unable to load appsngen api.'));
+                        }
+                    });
+                }
+            };
 
-            xhr.open('GET', tagUrl, true);
-            xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.setRequestHeader('Accept', 'application/json');
+            var resolveWidgetVersionWithXhr = function (callback) {
+                var xhr = new XMLHttpRequest();
+                var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
+                        encodeURIComponent(widgetUrn) + '/tags/' + integrationTag;
 
-            if (xhr.addEventListener) {
-                xhr.addEventListener('load', function (event) {
-                    processResponse(event.target.status, event.target.response || event.target.responseText/*IE9 FIX*/);
-                }, false);
-            } else {
-                xhr.onreadystatechange = function () {
-                    /*IE7,8,9 FIX (handler called on .abort() with zero status)*/
-                    if (xhr.readyState === 4 && xhr.status !== 0) {
-                        processResponse(xhr.status, xhr.responseText);
+                var processResponse = function (status, responseText) {
+                    var response;
+
+                    if (status !== 200) {
+                        callback(new Error(widgetUrn + ': ' +
+                                'expected 200 status during widget version request but got ' + status +
+                                ' with response: "' + responseText + '".'));
+                    } else {
+                        try {
+                            response = JSON.parse(responseText);
+                        } catch (e) {
+                            callback(new Error(widgetUrn + ': ' +
+                                    'unable to parse widget version response: "' + responseText + '".'));
+                        }
+
+                        callback(null, response.widgetVersion);
                     }
                 };
-            }
 
-            xhr.send();
-        };
-
-        var resolveWidgetVersionWithIFrame = function (callback) {
-            var frame = document.createElement('iframe');
-            var location = window.location;
-            var parent = location.protocol + '//' + location.host;
-            var messagePrefix = 'appsngen-tag-resolution-' + Math.random();
-            var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
-                    encodeURIComponent(widgetUrn) + '/tags/' + integrationTag + '/iframe' +
-                    '?messagePrefix=' + encodeURIComponent(messagePrefix) +
-                    '&parentUrl=' + encodeURIComponent(parent) +
-                    '&token=' + encodeURIComponent(accessToken);
-
-            var processMessage = function (event) {
-                var response, responseText;
-
-                if (!event.data || typeof event.data !== 'string' || event.data.indexOf(messagePrefix) !== 0) {
+                if (!integrationTag) {
+                    callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
                     return;
                 }
 
-                try {
-                    responseText = event.data.replace(messagePrefix, '');
-                    response = JSON.parse(responseText);
-                } catch (e) {
-                    callback(new Error(widgetUrn + ': ' +
-                            'unable to parse widget version message: "' + event.data + '".'));
+                xhr.open('GET', tagUrl, true);
+                xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('Accept', 'application/json');
+
+                if (xhr.addEventListener) {
+                    xhr.addEventListener('load', function (event) {
+                        processResponse(event.target.status, event.target.response || event.target.responseText/*IE9 FIX*/);
+                    }, false);
+                } else {
+                    xhr.onreadystatechange = function () {
+                        /*IE7,8,9 FIX (handler called on .abort() with zero status)*/
+                        if (xhr.readyState === 4 && xhr.status !== 0) {
+                            processResponse(xhr.status, xhr.responseText);
+                        }
+                    };
                 }
 
-                callback(null, response.widgetVersion);
+                xhr.send();
             };
 
-            if (!integrationTag) {
-                callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
-                return;
-            }
+            var resolveWidgetVersionWithIFrame = function (callback) {
+                var frame = document.createElement('iframe');
+                var location = window.location;
+                var parent = location.protocol + '//' + location.host;
+                var messagePrefix = 'appsngen-tag-resolution-' + Math.random();
+                var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
+                        encodeURIComponent(widgetUrn) + '/tags/' + integrationTag + '/iframe' +
+                        '?messagePrefix=' + encodeURIComponent(messagePrefix) +
+                        '&parentUrl=' + encodeURIComponent(parent) +
+                        '&token=' + encodeURIComponent(accessToken);
 
-            frame.src = tagUrl;
-            frame.style.display = 'none';
+                var processMessage = function (event) {
+                    var response, responseText;
 
-            if (window.addEventListener) {
-                window.addEventListener('message', function (event) {
-                    processMessage(event);
-                }, false);
-            } else {
-                window.attachEvent('onmessage', function (event) {
-                    processMessage(event);
-                });
-            }
+                    if (!event.data || typeof event.data !== 'string' || event.data.indexOf(messagePrefix) !== 0) {
+                        return;
+                    }
 
-            document.body.appendChild(frame);
-        };
+                    try {
+                        responseText = event.data.replace(messagePrefix, '');
+                        response = JSON.parse(responseText);
+                    } catch (e) {
+                        callback(new Error(widgetUrn + ': ' +
+                                'unable to parse widget version message: "' + event.data + '".'));
+                    }
 
-        var resolveWidgetVersion = function (callback) {
-            if (useIframeInsteadOfXhr) {
-                resolveWidgetVersionWithIFrame(callback);
-            } else {
-                resolveWidgetVersionWithXhr(callback);
-            }
-        };
+                    callback(null, response.widgetVersion);
+                };
 
-        resolveWidgetVersion(function (error, version) {
-            if (error) {
-                window.console.error(error);
-            } else {
-                versionResolved = true;
-                widgetVersion = version;
-
-                if (apiLoaded) {
-                    createWidgetFrame();
+                if (!integrationTag) {
+                    callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
+                    return;
                 }
-            }
-        });
 
-        ensureAppsNgenApiLoaded(function (error) {
-            if (error) {
-                window.console.error(error);
-            } else {
-                apiLoaded = true;
+                frame.src = tagUrl;
+                frame.style.display = 'none';
 
-                if (versionResolved) {
-                    createWidgetFrame();
+                if (window.addEventListener) {
+                    window.addEventListener('message', function (event) {
+                        processMessage(event);
+                    }, false);
+                } else {
+                    window.attachEvent('onmessage', function (event) {
+                        processMessage(event);
+                    });
                 }
-            }
-        });
-    }());
+
+                document.body.appendChild(frame);
+            };
+
+            var resolveWidgetVersion = function (callback) {
+                if (useIframeInsteadOfXhr) {
+                    resolveWidgetVersionWithIFrame(callback);
+                } else {
+                    resolveWidgetVersionWithXhr(callback);
+                }
+            };
+
+            resolveWidgetVersion(function (error, version) {
+                if (error) {
+                    window.console.error(error);
+                } else {
+                    versionResolved = true;
+                    widgetVersion = version;
+
+                    if (apiLoaded) {
+                        createWidgetFrame();
+                    }
+                }
+            });
+
+            ensureAppsNgenApiLoaded(function (error) {
+                if (error) {
+                    window.console.error(error);
+                } else {
+                    apiLoaded = true;
+
+                    if (versionResolved) {
+                        createWidgetFrame();
+                    }
+                }
+            });
+        }());
     </script>
 </div>
 
-<script id="router" type="text/javascript">
-    (function () {
-        var viewerBaseUrl = 'https://cdn.appsngen.com/viewer';
-        var apiLoaded = false;
+<!-- company/fund research section -->
+<div>
+    <div id="company-research-container">
+        <div id="urn:app:bbt:company-research"></div>
+        <script id="company-research-integration" type="text/javascript">
+            (function () {
+                var viewerBaseUrl = 'https://cdn.appsngen.com/viewer';
+                var accessToken = 'eyJhbGciOiJTSEExd2l0aFJTQSIsInR5cCI6IkpPU0UiLCJjdHkiOiJqc29uIiwieDV0IjoiYU1ZY1ZjdW9MSjc2dk5xYXBrQXFINDVuNmJBPSJ9.eyJpc3MiOiJhcHBzbmdlbiIsInN1YiI6IndpZGdldDp1cm46YXBwOmJidDpjb21wYW55LXJlc2VhcmNoIiwiZXhwIjoxODAzOTk4MzU3OTI3LCJpYXQiOjE0ODg0NjU3NDUxNzEsImp0aSI6IjkyY2U2NTc0LTY0MmItNGY2Ny05OWQ5LTcyZjM5Njg5N2I3ZCIsImF1ZCI6eyJ1c2VyIjoiZGV2ZWxvcGVyQGJidC5jb20iLCJvcmdhbml6YXRpb24iOiJ1cm46b3JnOmJidCIsInVzZXJSb2xlcyI6WyJST0xFX0RFVkVMT1BFUiJdLCJkb21haW5zIjpbIi8vKi5hcHBzbmdlbi5jb20iLCIvL21ha3NpbS1iYXJ0b3NoeWsuZ2l0aHViLmlvIl19LCJ0eXAiOiJhdCJ9.hDXR9K+9x+3LBeP7q0Ij7rtsfWFg0MKrXzVFvxzt0RPEUPt399s3kmxrEcyCWBmne/3tfl8+pt4o9rSy3J9RvocAoA6kVh8rRlIYptiCDWibYPEfNkG9GLgcmnMioz7HEO55xPbprtCkYa2YS5otPeO5Uh0/tXdoMCTDEkCNr2o=';
+                var integrationTag = 'bbt-redesign-demo';
+                var widgetVersion = ''; // will be resolved by xhr request
+                var widgetUrn = 'urn:app:bbt:company-research';
+                var widgetName = 'Company Research';
+                var widgetPreferences = {"ric": "BBT.N"};
+                var frameSettings = {
+                    width: '100%',
+                    height: '900px',
+                    frameborder: '0',
+                    scrolling: 'no'
+                };
+                var apiLoaded = false;
+                var versionResolved = false;
+                var useIframeInsteadOfXhr = window.XDomainRequest !== undefined; // IE8-9
 
-        var addScriptLoadHandler = function (scriptElement, callback) {
-            var scriptIsLoaded = false;
-            var previousHandler = scriptElement.onload;
+                var createWidgetFrame = function () {
+                    var div, preferenceName;
+                    var divId = widgetUrn + '-' + appsngen.util.guid();
+                    var frameName = widgetName + '-' + appsngen.util.guid();
+                    var location = window.location;
+                    var parent = location.protocol + '//' + location.host;
+                    var url = viewerBaseUrl + '/content/widgets/' +
+                            encodeURIComponent(widgetUrn) + '/' + encodeURIComponent(widgetVersion) + '/index.html' +
+                            '?token=' + encodeURIComponent(accessToken) +
+                            '&parent=' + encodeURIComponent(parent);
 
-            // IE8 hack
-            scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = function () {
-                if (!scriptIsLoaded && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete")) {
-                    scriptIsLoaded = true;
-
-                    if (previousHandler) {
-                        previousHandler.call(scriptElement);
+                    for (preferenceName in widgetPreferences) {
+                        if (widgetPreferences.hasOwnProperty(preferenceName)) {
+                            url += '&X_' + encodeURIComponent(preferenceName) +
+                                    '=' + encodeURIComponent(widgetPreferences[preferenceName]);
+                        }
                     }
 
-                    callback.call(scriptElement);
+                    div = document.getElementById(widgetUrn);
+                    div.setAttribute('id', divId);
+                    window.appsngen.addApplication(frameName, divId, frameSettings, url);
+                };
 
-                    // IE8 memory leak fix
-                    scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = null;
-                }
+                var addScriptLoadHandler = function (scriptElement, callback) {
+                    var scriptIsLoaded = false;
+                    var previousHandler = scriptElement.onload;
+
+                    // IE8 hack
+                    scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = function () {
+                        if (!scriptIsLoaded && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete")) {
+                            scriptIsLoaded = true;
+
+                            if (previousHandler) {
+                                previousHandler.call(scriptElement);
+                            }
+
+                            callback.call(scriptElement);
+
+                            // IE8 memory leak fix
+                            scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = null;
+                        }
+                    };
+                };
+
+                var createScript = function (callback) {
+                    var scriptId = 'appsngen-container-api';
+                    var scriptElement;
+
+                    scriptElement = document.getElementById(scriptId);
+                    if (scriptElement) {
+                        if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                            callback();
+                        } else {
+                            addScriptLoadHandler(scriptElement, function () {
+                                callback();
+                            });
+                        }
+                    } else {
+                        scriptElement = document.createElement('script');
+                        scriptElement.src = viewerBaseUrl + '/content/js/appsngen.container.api.js';
+                        scriptElement.setAttribute('id', scriptId);
+                        addScriptLoadHandler(scriptElement, function () {
+                            callback();
+                        });
+
+                        document.body.appendChild(scriptElement);
+                    }
+                };
+
+                var ensureAppsNgenApiLoaded = function (callback) {
+                    if (window.appsngen && window.appsngen.apiVersion === 'widget') {
+                        window.appsngen.ready(function () {
+                            callback();
+                        });
+                    } else if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                        callback();
+                    } else {
+                        createScript(function () {
+                            if (window.appsngen) {
+                                callback();
+                            } else if (window.console && window.console.error) {
+                                callback(new Error(widgetUrn + ': unable to load appsngen api.'));
+                            }
+                        });
+                    }
+                };
+
+                var resolveWidgetVersionWithXhr = function (callback) {
+                    var xhr = new XMLHttpRequest();
+                    var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
+                            encodeURIComponent(widgetUrn) + '/tags/' + integrationTag;
+
+                    var processResponse = function (status, responseText) {
+                        var response;
+
+                        if (status !== 200) {
+                            callback(new Error(widgetUrn + ': ' +
+                                    'expected 200 status during widget version request but got ' + status +
+                                    ' with response: "' + responseText + '".'));
+                        } else {
+                            try {
+                                response = JSON.parse(responseText);
+                            } catch (e) {
+                                callback(new Error(widgetUrn + ': ' +
+                                        'unable to parse widget version response: "' + responseText + '".'));
+                            }
+
+                            callback(null, response.widgetVersion);
+                        }
+                    };
+
+                    if (!integrationTag) {
+                        callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
+                        return;
+                    }
+
+                    xhr.open('GET', tagUrl, true);
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.setRequestHeader('Accept', 'application/json');
+
+                    if (xhr.addEventListener) {
+                        xhr.addEventListener('load', function (event) {
+                            processResponse(event.target.status, event.target.response || event.target.responseText/*IE9 FIX*/);
+                        }, false);
+                    } else {
+                        xhr.onreadystatechange = function () {
+                            /*IE7,8,9 FIX (handler called on .abort() with zero status)*/
+                            if (xhr.readyState === 4 && xhr.status !== 0) {
+                                processResponse(xhr.status, xhr.responseText);
+                            }
+                        };
+                    }
+
+                    xhr.send();
+                };
+
+                var resolveWidgetVersionWithIFrame = function (callback) {
+                    var frame = document.createElement('iframe');
+                    var location = window.location;
+                    var parent = location.protocol + '//' + location.host;
+                    var messagePrefix = 'appsngen-tag-resolution-' + Math.random();
+                    var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
+                            encodeURIComponent(widgetUrn) + '/tags/' + integrationTag + '/iframe' +
+                            '?messagePrefix=' + encodeURIComponent(messagePrefix) +
+                            '&parentUrl=' + encodeURIComponent(parent) +
+                            '&token=' + encodeURIComponent(accessToken);
+
+                    var processMessage = function (event) {
+                        var response, responseText;
+
+                        if (!event.data || typeof event.data !== 'string' || event.data.indexOf(messagePrefix) !== 0) {
+                            return;
+                        }
+
+                        try {
+                            responseText = event.data.replace(messagePrefix, '');
+                            response = JSON.parse(responseText);
+                        } catch (e) {
+                            callback(new Error(widgetUrn + ': ' +
+                                    'unable to parse widget version message: "' + event.data + '".'));
+                        }
+
+                        callback(null, response.widgetVersion);
+                    };
+
+                    if (!integrationTag) {
+                        callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
+                        return;
+                    }
+
+                    frame.src = tagUrl;
+                    frame.style.display = 'none';
+
+                    if (window.addEventListener) {
+                        window.addEventListener('message', function (event) {
+                            processMessage(event);
+                        }, false);
+                    } else {
+                        window.attachEvent('onmessage', function (event) {
+                            processMessage(event);
+                        });
+                    }
+
+                    document.body.appendChild(frame);
+                };
+
+                var resolveWidgetVersion = function (callback) {
+                    if (useIframeInsteadOfXhr) {
+                        resolveWidgetVersionWithIFrame(callback);
+                    } else {
+                        resolveWidgetVersionWithXhr(callback);
+                    }
+                };
+
+                resolveWidgetVersion(function (error, version) {
+                    if (error) {
+                        window.console.error(error);
+                    } else {
+                        versionResolved = true;
+                        widgetVersion = version;
+
+                        if (apiLoaded) {
+                            createWidgetFrame();
+                        }
+                    }
+                });
+
+                ensureAppsNgenApiLoaded(function (error) {
+                    if (error) {
+                        window.console.error(error);
+                    } else {
+                        apiLoaded = true;
+
+                        if (versionResolved) {
+                            createWidgetFrame();
+                        }
+                    }
+                });
+            }());
+        </script>
+    </div>
+    <div id="fund-research-container" style="display: none;">
+        <div id="urn:app:bbt:fund-research"></div>
+        <script id="fund-research-integration" type="text/javascript">
+            (function () {
+                var viewerBaseUrl = 'https://cdn.appsngen.com/viewer';
+                var accessToken = 'eyJhbGciOiJTSEExd2l0aFJTQSIsInR5cCI6IkpPU0UiLCJjdHkiOiJqc29uIiwieDV0IjoiYU1ZY1ZjdW9MSjc2dk5xYXBrQXFINDVuNmJBPSJ9.eyJpc3MiOiJhcHBzbmdlbiIsInN1YiI6IndpZGdldDp1cm46YXBwOmJidDpmdW5kLXJlc2VhcmNoIiwiZXhwIjoxODA1NjM2ODc4MTQyLCJpYXQiOjE0OTAxMDU4MTUyOTgsImp0aSI6IjdhMmJmMDg5LWUyYTEtNDA1Ny1hNmMyLWMzMTY2YTMzNzEwYyIsImF1ZCI6eyJ1c2VyIjoiZGV2ZWxvcGVyQGJidC5jb20iLCJvcmdhbml6YXRpb24iOiJ1cm46b3JnOmJidCIsInVzZXJSb2xlcyI6WyJST0xFX0RFVkVMT1BFUiJdLCJkb21haW5zIjpbImh0dHBzOi8vY2RuLmFwcHNuZ2VuLmNvbS92aWV3ZXIiLCIvL21ha3NpbS1iYXJ0b3NoeWsuZ2l0aHViLmlvIl19LCJ0eXAiOiJhdCJ9.NQJjKbT4Gl4uYYP3djf/1C2fgPSTwdSbqKPM+kVoZesOOFFyZnarPkTygeMPWIA+QtZFouLdrJXtodXJ/D0G8ttv53a1bnSpKZc0FvR/kLd5fmmnkeZR3fTwvStWPYrSYDmshT7b7fQM+Y9NI/z9ozgUgLMIwE+KB6kjCLWQYv0=';
+                var integrationTag = 'bbt-redesign-demo';
+                var widgetVersion = ''; // will be resolved by xhr request
+                var widgetUrn = 'urn:app:bbt:fund-research';
+                var widgetName = 'Company Research';
+                var widgetPreferences = {"lipperId": 40099235};
+                var frameSettings = {
+                    width: '100%',
+                    height: '900px',
+                    frameborder: '0',
+                    scrolling: 'no'
+                };
+                var apiLoaded = false;
+                var versionResolved = false;
+                var useIframeInsteadOfXhr = window.XDomainRequest !== undefined; // IE8-9
+
+                var createWidgetFrame = function () {
+                    var div, preferenceName;
+                    var divId = widgetUrn + '-' + appsngen.util.guid();
+                    var frameName = widgetName + '-' + appsngen.util.guid();
+                    var location = window.location;
+                    var parent = location.protocol + '//' + location.host;
+                    var url = viewerBaseUrl + '/content/widgets/' +
+                            encodeURIComponent(widgetUrn) + '/' + encodeURIComponent(widgetVersion) + '/index.html' +
+                            '?token=' + encodeURIComponent(accessToken) +
+                            '&parent=' + encodeURIComponent(parent);
+
+                    for (preferenceName in widgetPreferences) {
+                        if (widgetPreferences.hasOwnProperty(preferenceName)) {
+                            url += '&X_' + encodeURIComponent(preferenceName) +
+                                    '=' + encodeURIComponent(widgetPreferences[preferenceName]);
+                        }
+                    }
+
+                    div = document.getElementById(widgetUrn);
+                    div.setAttribute('id', divId);
+                    window.appsngen.addApplication(frameName, divId, frameSettings, url);
+                };
+
+                var addScriptLoadHandler = function (scriptElement, callback) {
+                    var scriptIsLoaded = false;
+                    var previousHandler = scriptElement.onload;
+
+                    // IE8 hack
+                    scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = function () {
+                        if (!scriptIsLoaded && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete")) {
+                            scriptIsLoaded = true;
+
+                            if (previousHandler) {
+                                previousHandler.call(scriptElement);
+                            }
+
+                            callback.call(scriptElement);
+
+                            // IE8 memory leak fix
+                            scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = null;
+                        }
+                    };
+                };
+
+                var createScript = function (callback) {
+                    var scriptId = 'appsngen-container-api';
+                    var scriptElement;
+
+                    scriptElement = document.getElementById(scriptId);
+                    if (scriptElement) {
+                        if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                            callback();
+                        } else {
+                            addScriptLoadHandler(scriptElement, function () {
+                                callback();
+                            });
+                        }
+                    } else {
+                        scriptElement = document.createElement('script');
+                        scriptElement.src = viewerBaseUrl + '/content/js/appsngen.container.api.js';
+                        scriptElement.setAttribute('id', scriptId);
+                        addScriptLoadHandler(scriptElement, function () {
+                            callback();
+                        });
+
+                        document.body.appendChild(scriptElement);
+                    }
+                };
+
+                var ensureAppsNgenApiLoaded = function (callback) {
+                    if (window.appsngen && window.appsngen.apiVersion === 'widget') {
+                        window.appsngen.ready(function () {
+                            callback();
+                        });
+                    } else if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                        callback();
+                    } else {
+                        createScript(function () {
+                            if (window.appsngen) {
+                                callback();
+                            } else if (window.console && window.console.error) {
+                                callback(new Error(widgetUrn + ': unable to load appsngen api.'));
+                            }
+                        });
+                    }
+                };
+
+                var resolveWidgetVersionWithXhr = function (callback) {
+                    var xhr = new XMLHttpRequest();
+                    var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
+                            encodeURIComponent(widgetUrn) + '/tags/' + integrationTag;
+
+                    var processResponse = function (status, responseText) {
+                        var response;
+
+                        if (status !== 200) {
+                            callback(new Error(widgetUrn + ': ' +
+                                    'expected 200 status during widget version request but got ' + status +
+                                    ' with response: "' + responseText + '".'));
+                        } else {
+                            try {
+                                response = JSON.parse(responseText);
+                            } catch (e) {
+                                callback(new Error(widgetUrn + ': ' +
+                                        'unable to parse widget version response: "' + responseText + '".'));
+                            }
+
+                            callback(null, response.widgetVersion);
+                        }
+                    };
+
+                    if (!integrationTag) {
+                        callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
+                        return;
+                    }
+
+                    xhr.open('GET', tagUrl, true);
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.setRequestHeader('Accept', 'application/json');
+
+                    if (xhr.addEventListener) {
+                        xhr.addEventListener('load', function (event) {
+                            processResponse(event.target.status, event.target.response || event.target.responseText/*IE9 FIX*/);
+                        }, false);
+                    } else {
+                        xhr.onreadystatechange = function () {
+                            /*IE7,8,9 FIX (handler called on .abort() with zero status)*/
+                            if (xhr.readyState === 4 && xhr.status !== 0) {
+                                processResponse(xhr.status, xhr.responseText);
+                            }
+                        };
+                    }
+
+                    xhr.send();
+                };
+
+                var resolveWidgetVersionWithIFrame = function (callback) {
+                    var frame = document.createElement('iframe');
+                    var location = window.location;
+                    var parent = location.protocol + '//' + location.host;
+                    var messagePrefix = 'appsngen-tag-resolution-' + Math.random();
+                    var tagUrl = viewerBaseUrl + '/api/v1/widget-integration/' +
+                            encodeURIComponent(widgetUrn) + '/tags/' + integrationTag + '/iframe' +
+                            '?messagePrefix=' + encodeURIComponent(messagePrefix) +
+                            '&parentUrl=' + encodeURIComponent(parent) +
+                            '&token=' + encodeURIComponent(accessToken);
+
+                    var processMessage = function (event) {
+                        var response, responseText;
+
+                        if (!event.data || typeof event.data !== 'string' || event.data.indexOf(messagePrefix) !== 0) {
+                            return;
+                        }
+
+                        try {
+                            responseText = event.data.replace(messagePrefix, '');
+                            response = JSON.parse(responseText);
+                        } catch (e) {
+                            callback(new Error(widgetUrn + ': ' +
+                                    'unable to parse widget version message: "' + event.data + '".'));
+                        }
+
+                        callback(null, response.widgetVersion);
+                    };
+
+                    if (!integrationTag) {
+                        callback(new Error(widgetUrn + ': expected non-empty integration tag, but got "' + integrationTag + '"'));
+                        return;
+                    }
+
+                    frame.src = tagUrl;
+                    frame.style.display = 'none';
+
+                    if (window.addEventListener) {
+                        window.addEventListener('message', function (event) {
+                            processMessage(event);
+                        }, false);
+                    } else {
+                        window.attachEvent('onmessage', function (event) {
+                            processMessage(event);
+                        });
+                    }
+
+                    document.body.appendChild(frame);
+                };
+
+                var resolveWidgetVersion = function (callback) {
+                    if (useIframeInsteadOfXhr) {
+                        resolveWidgetVersionWithIFrame(callback);
+                    } else {
+                        resolveWidgetVersionWithXhr(callback);
+                    }
+                };
+
+                resolveWidgetVersion(function (error, version) {
+                    if (error) {
+                        window.console.error(error);
+                    } else {
+                        versionResolved = true;
+                        widgetVersion = version;
+
+                        if (apiLoaded) {
+                            createWidgetFrame();
+                        }
+                    }
+                });
+
+                ensureAppsNgenApiLoaded(function (error) {
+                    if (error) {
+                        window.console.error(error);
+                    } else {
+                        apiLoaded = true;
+
+                        if (versionResolved) {
+                            createWidgetFrame();
+                        }
+                    }
+                });
+            }());
+        </script>
+    </div>
+    <script id="router" type="text/javascript">
+        (function () {
+            var viewerBaseUrl = 'https://cdn.appsngen.com/viewer';
+            var apiLoaded = false;
+
+            var addScriptLoadHandler = function (scriptElement, callback) {
+                var scriptIsLoaded = false;
+                var previousHandler = scriptElement.onload;
+
+                // IE8 hack
+                scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = function () {
+                    if (!scriptIsLoaded && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete")) {
+                        scriptIsLoaded = true;
+
+                        if (previousHandler) {
+                            previousHandler.call(scriptElement);
+                        }
+
+                        callback.call(scriptElement);
+
+                        // IE8 memory leak fix
+                        scriptElement.onload = scriptElement.onerror = scriptElement.onreadystatechange = null;
+                    }
+                };
             };
-        };
 
-        var createScript = function (callback) {
-            var scriptId = 'appsngen-container-api';
-            var scriptElement;
+            var createScript = function (callback) {
+                var scriptId = 'appsngen-container-api';
+                var scriptElement;
 
-            scriptElement = document.getElementById(scriptId);
-            if (scriptElement) {
-                if (window.appsngen && window.appsngen.apiVersion === 'container') {
-                    callback();
+                scriptElement = document.getElementById(scriptId);
+                if (scriptElement) {
+                    if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                        callback();
+                    } else {
+                        addScriptLoadHandler(scriptElement, function () {
+                            callback();
+                        });
+                    }
                 } else {
+                    scriptElement = document.createElement('script');
+                    scriptElement.src = viewerBaseUrl + '/content/js/appsngen.container.api.js';
+                    scriptElement.setAttribute('id', scriptId);
                     addScriptLoadHandler(scriptElement, function () {
                         callback();
                     });
+
+                    document.body.appendChild(scriptElement);
                 }
-            } else {
-                scriptElement = document.createElement('script');
-                scriptElement.src = viewerBaseUrl + '/content/js/appsngen.container.api.js';
-                scriptElement.setAttribute('id', scriptId);
-                addScriptLoadHandler(scriptElement, function () {
-                    callback();
-                });
+            };
 
-                document.body.appendChild(scriptElement);
-            }
-        };
-
-        var ensureAppsNgenApiLoaded = function (callback) {
-            if (window.appsngen && window.appsngen.apiVersion === 'widget') {
-                window.appsngen.ready(function () {
-                    callback();
-                });
-            } else if (window.appsngen && window.appsngen.apiVersion === 'container') {
-                callback();
-            } else {
-                createScript(function () {
-                    if (window.appsngen) {
+            var ensureAppsNgenApiLoaded = function (callback) {
+                if (window.appsngen && window.appsngen.apiVersion === 'widget') {
+                    window.appsngen.ready(function () {
                         callback();
-                    } else if (window.console && window.console.error) {
-                        callback(new Error(widgetUrn + ': unable to load appsngen api.'));
-                    }
-                });
-            }
-        };
+                    });
+                } else if (window.appsngen && window.appsngen.apiVersion === 'container') {
+                    callback();
+                } else {
+                    createScript(function () {
+                        if (window.appsngen) {
+                            callback();
+                        } else if (window.console && window.console.error) {
+                            callback(new Error(widgetUrn + ': unable to load appsngen api.'));
+                        }
+                    });
+                }
+            };
 
-        ensureAppsNgenApiLoaded(function (error) {
-            var fundResearch = document.getElementById('fund-research-container');
-            var companyResearch = document.getElementById('company-research-container');
+            ensureAppsNgenApiLoaded(function (error) {
+                var fundResearch = document.getElementById('fund-research-container');
+                var companyResearch = document.getElementById('company-research-container');
 
-            if (error) {
-                window.console.error(error);
-            } else {
-                apiLoaded = true;
+                if (error) {
+                    window.console.error(error);
+                } else {
+                    apiLoaded = true;
 
-                appsngen.events.subscribe('SINGLE_INSTRUMENT', function (event, data) {
-                    if (data.assetType && data.assetType.toUpperCase() === 'FUND') {
-                        companyResearch.style.display = 'none';
-                        fundResearch.style.display = 'block';
-                    }
+                    appsngen.events.subscribe('SINGLE_INSTRUMENT', function (event, data) {
+                        if (data.assetType && data.assetType.toUpperCase() === 'FUND') {
+                            companyResearch.style.display = 'none';
+                            fundResearch.style.display = 'block';
+                        }
 
-                    if (data.assetType && data.assetType.toUpperCase() === 'EQUITY') {
-                        companyResearch.style.display = 'block';
-                        fundResearch.style.display = 'none';
-                    }
-                });
-            }
-        });
-    }());
-</script>
-
-
-
-
-
+                        if (data.assetType && data.assetType.toUpperCase() === 'EQUITY') {
+                            companyResearch.style.display = 'block';
+                            fundResearch.style.display = 'none';
+                        }
+                    });
+                }
+            });
+        }());
+    </script>
+</div>
 
 </div>
 <div class="ls-lqr" id="ls-gen88448242-ls-lqr">
