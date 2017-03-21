@@ -100,7 +100,7 @@
 }
 
 #ls-row-3 {
-    max-width: 970px;
+    max-width: 992px;
     margin: 0 auto;
 }
 
@@ -16136,7 +16136,7 @@ header.component h1, header.component h2, header.component h3, header.component 
 }
 
 div#ls-row-3 div:first-child {
-    max-width: 75%;
+    /*max-width: 75%;*/
     margin: 0 auto;
 }
 
