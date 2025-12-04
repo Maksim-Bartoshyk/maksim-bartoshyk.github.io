@@ -58,13 +58,13 @@
       }
 
       function drawScope(analyser) {
-        var ctx = document.getElementById('scope').getContext('2d');
-        var width = ctx.canvas.width;
-        var height = ctx.canvas.height;
-        var timeData = new Uint8Array(analyser.frequencyBinCount);
-        var scaling = height / 256;
-        var risingEdge = 0;
-        var edgeThreshold = 5;
+        const ctx = document.getElementById('scope').getContext('2d');
+        const width = ctx.canvas.width;
+        const height = ctx.canvas.height;
+        const timeData = new Uint8Array(analyser.frequencyBinCount);
+        const scaling = height / 256;
+        let risingEdge = 0;
+        const edgeThreshold = 5;
 
         analyser.getByteTimeDomainData(timeData);
 
@@ -91,7 +91,7 @@
       function drawHistogram() {
         const ctx = document.getElementById('histogram').getContext('2d');
         ctx.canvas.width = histogram.length;
-        var height = ctx.canvas.height;
+        const height = ctx.canvas.height;
         ctx.fillStyle = 'rgba(0, 20, 0, 0.1)';
         ctx.fillRect(0, 0, ctx.canvas.width, height);
 
@@ -99,7 +99,7 @@
         ctx.strokeStyle = 'rgb(0, 200, 0)';
         ctx.beginPath();
 
-        const maxValue = 0;
+        let maxValue = 0;
         for (const bin of histogram) {
           if (bin > maxValue) {
             maxValue = bin;
