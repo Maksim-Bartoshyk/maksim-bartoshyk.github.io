@@ -53,8 +53,7 @@
           microphone.connect(pulseProcessor);
         })
         .catch(e => {
-          console.log(e);
-          alert('ERROR: unable to start microphone');
+          addDebug(`ERROR: unable to start microphone: ${e}`);
         });
 
       draw();

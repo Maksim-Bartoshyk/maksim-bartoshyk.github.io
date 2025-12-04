@@ -9,9 +9,8 @@ class PulseProcessor extends AudioWorkletProcessor {
     // inputs[0] is the first input, channel[0] is the first channel
     const inputChannelData = inputs[0][0];
 
+    const pulses = [];
     if (inputChannelData) {
-      const pulses = [];
-
       for (i = 0; i < inputChannelData.length; i++) {
         const currentValue = inputChannelData[i] + 1; // from 0 to 2
         if (currentValue > prevValue) {
@@ -31,9 +30,9 @@ class PulseProcessor extends AudioWorkletProcessor {
 
         prevValue = currentValue;
       }
-
-      this.port.postMessage(pulses);
     }
+
+    this.port.postMessage(pulses);
 
     return true;
   }
