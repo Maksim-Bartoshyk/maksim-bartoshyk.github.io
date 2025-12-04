@@ -29,23 +29,6 @@
       analyser.fftSize = 2048;
 
       // pulse processor
-      await audioContext.audioWorklet.addModule('pulse-processor.js')
-        .catch(e => {
-          addDebug(`unable to add worklet: ${e}`);
-        });
-      const pulseProcessor = new AudioWorkletNode(audioContext, 'pulse-processor');
-      pulseProcessor.port.onmessage = (event) => {
-        const pulses = event.data;
-        addDebug(`pulses: ${pulses.length}`);
-
-        for (pulse of pulses) {
-          const bin = pulse / 1 * (histogram.length - 1);
-          if (bin > noise) {
-            histogram[bin]++;
-          }
-        }
-      };
-
       const pulseProcessor2 = audioContext.createScriptProcessor(4096, 1, 1);
 
       const minFrontPoints = 4;
@@ -54,17 +37,17 @@
       let prevValue = 0;
       let frontStartValue = 0;
       pulseProcessor2.addEventListener("audioprocess", (audioProcessingEvent) => {
-        // The input buffer is the song we loaded earlier
         let inputBuffer = audioProcessingEvent.inputBuffer;
         let inputChannelData = inputBuffer.getChannelData(0);
 
-        const pulses = [];
         if (inputChannelData) {
+          const pulses = [];
+          addDebug(`data length: ${inputChannelData.length}`);
           for (i = 0; i < inputChannelData.length; i++) {
             const currentValue = inputChannelData[i] + 1; // from 0 to 2
             if (currentValue > prevValue) {
               if (currentFrontPoints === 0) {
-                frontStartValue = prevValue;
+                frontStartValue = currentValue;
               }
 
               currentFrontPoints++;
@@ -79,14 +62,13 @@
 
             prevValue = currentValue;
           }
-        }
 
-        addDebug(`pulses: ${pulses.length}`);
-
-        for (pulse of pulses) {
-          const bin = pulse / 1 * (histogram.length - 1);
-          if (bin > noise) {
-            histogram[bin]++;
+          addDebug(`pulses: ${pulses.length}`);
+          for (pulse of pulses) {
+            const bin = pulse / 1 * (histogram.length - 1);
+            if (bin > noise) {
+              histogram[bin]++;
+            }
           }
         }
       });
