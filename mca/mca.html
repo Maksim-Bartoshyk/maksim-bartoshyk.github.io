@@ -29,11 +29,14 @@
       analyser.fftSize = 2048;
 
       // pulse processor
-      await audioContext.audioWorklet.addModule('./pulse-processor.js');
+      await audioContext.audioWorklet.addModule('pulse-processor.js')
+        .catch(e => {
+          addDebug(`unable to add worklet: ${e}`);
+        });
       const pulseProcessor = new AudioWorkletNode(audioContext, 'pulse-processor');
       pulseProcessor.port.onmessage = (event) => {
         const pulses = event.data;
-        document.getElementById('console').innerText += JSON.stringify(pulses) + '\n';
+        addDebug(`pulses: ${pulses.length}`);
 
         for (pulse of pulses) {
           const bin = pulse / 1 * (histogram.length - 1);
@@ -123,6 +126,10 @@
         }
 
         ctx.stroke();
+      }
+
+      function addDebug(msg) {
+        document.getElementById('console').innerText += `${msg}\n`;
       }
     }());
   </script>
