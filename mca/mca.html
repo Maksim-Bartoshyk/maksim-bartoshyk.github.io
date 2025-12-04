@@ -1,0 +1,124 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+  <div>
+    <canvas id='scope' width=600 height=200></canvas>
+    <br>
+    <canvas id='histogram' width=2048 height=400></canvas>
+  </div>
+  <script>
+    (async function () {
+      window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContext();
+
+      // histogram
+      const channels = 2048;
+      const histogram = new Array(channels).fill(0);
+      const noise = 30;
+
+      // oscilloscope
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+
+      // pulse processor
+      await audioContext.audioWorklet.addModule('./pulse-processor.js');
+      const pulseProcessor = new AudioWorkletNode(audioContext, 'pulse-processor');
+      pulseProcessor.port.onmessage = (event) => {
+        const pulses = event.data;
+        for (pulse of pulses) {
+          const bin = pulse / 1 * (histogram.length - 1);
+          if (bin > noise) {
+            histogram[bin]++;
+          }
+        }
+      };
+
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          const microphone = audioContext.createMediaStreamSource(stream);
+          microphone.connect(analyser);
+          microphone.connect(pulseProcessor);
+        })
+        .catch(e => {
+          console.log(e);
+          alert('ERROR: unable to start microphone');
+        });
+
+      draw();
+
+      function draw() {
+        drawScope(analyser);
+        drawHistogram();
+
+        requestAnimationFrame(draw);
+      }
+
+      function drawScope(analyser) {
+        var ctx = document.getElementById('scope').getContext('2d');
+        var width = ctx.canvas.width;
+        var height = ctx.canvas.height;
+        var timeData = new Uint8Array(analyser.frequencyBinCount);
+        var scaling = height / 256;
+        var risingEdge = 0;
+        var edgeThreshold = 5;
+
+        analyser.getByteTimeDomainData(timeData);
+
+        ctx.fillStyle = 'rgba(0, 20, 0, 0.1)';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgb(0, 200, 0)';
+        ctx.beginPath();
+
+        // No buffer overrun protection
+        while (timeData[risingEdge++] - 128 > 0 && risingEdge <= width);
+        if (risingEdge >= width) risingEdge = 0;
+
+        while (timeData[risingEdge++] - 128 < edgeThreshold && risingEdge <= width);
+        if (risingEdge >= width) risingEdge = 0;
+
+        for (var x = risingEdge; x < timeData.length && x - risingEdge < width; x++)
+          ctx.lineTo(x - risingEdge, height - timeData[x] * scaling);
+
+        ctx.stroke();
+      }
+
+      function drawHistogram() {
+        const ctx = document.getElementById('histogram').getContext('2d');
+        ctx.canvas.width = histogram.length;
+        var height = ctx.canvas.height;
+        ctx.fillStyle = 'rgba(0, 20, 0, 0.1)';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgb(0, 200, 0)';
+        ctx.beginPath();
+
+        const maxValue = 0;
+        for (const bin of histogram) {
+          if (bin > maxValue) {
+            maxValue = bin;
+          }
+        }
+        maxValue *= 1.1;
+
+        for (var x = 0; x < histogram.length; x++) {
+          const bin = histogram[i];
+          const binHeight = bin / maxValue;
+
+          ctx.moveTo(x, height);
+          ctx.lineTo(x, height - binHeight);
+        }
+
+        ctx.stroke();
+      }
+    }());
+  </script>
+</body>
+
+</html>
