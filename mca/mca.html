@@ -49,8 +49,7 @@
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then((stream) => {
           const microphone = audioContext.createMediaStreamSource(stream);
-          microphone.connect(analyser);
-          analyser.connect(pulseProcessor);
+          microphone.connect(pulseProcessor);
         })
         .catch(e => {
           addDebug(`ERROR: unable to start microphone: ${e}`);
