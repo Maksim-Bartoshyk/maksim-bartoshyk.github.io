@@ -6,9 +6,13 @@
 
 <body>
   <div>
-    <canvas id='scope' width=600 height=200></canvas>
+    <canvas id="scope" width=600 height=200></canvas>
     <br>
-    <canvas id='histogram' width=2048 height=400></canvas>
+    <canvas id="histogram" width=2048 height=400></canvas>
+    <br>
+    <span id="histogram-values"></span>
+    <br>
+    <pre id="console"></pre>
   </div>
   <script>
     (async function () {
@@ -29,6 +33,8 @@
       const pulseProcessor = new AudioWorkletNode(audioContext, 'pulse-processor');
       pulseProcessor.port.onmessage = (event) => {
         const pulses = event.data;
+        document.getElementById('console').innerText += JSON.stringify(pulses) + '\n';
+
         for (pulse of pulses) {
           const bin = pulse / 1 * (histogram.length - 1);
           if (bin > noise) {
@@ -89,6 +95,7 @@
       }
 
       function drawHistogram() {
+        document.getElementById('histogram-values').innerText = JSON.stringify(histogram);
         const ctx = document.getElementById('histogram').getContext('2d');
         ctx.canvas.width = histogram.length;
         const height = ctx.canvas.height;
