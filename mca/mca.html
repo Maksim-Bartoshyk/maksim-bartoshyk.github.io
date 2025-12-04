@@ -39,6 +39,7 @@
       pulseProcessor2.addEventListener("audioprocess", (audioProcessingEvent) => {
         let inputBuffer = audioProcessingEvent.inputBuffer;
         let inputChannelData = inputBuffer.getChannelData(0);
+        addDebug(`data: ${inputChannelData}`);
 
         if (inputChannelData) {
           const pulses = [];
