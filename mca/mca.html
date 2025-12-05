@@ -113,6 +113,9 @@
           .then(stream => {
             const microphone = audioContext.createMediaStreamSource(stream);
 
+            const gainNode = audioContext.createGain();
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+
             // oscilloscope
             const analyser = audioContext.createAnalyser();
             analyser.fftSize = 2048;
@@ -124,7 +127,7 @@
             });
 
             // processing chain
-            microphone.connect(analyser).connect(pulseProcessor).connect(audioContext.destination);
+            microphone.connect(gainNode).connect(analyser).connect(pulseProcessor).connect(audioContext.destination);
 
             renderInterval = setInterval(() => {
               drawScope(analyser);
