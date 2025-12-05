@@ -116,14 +116,15 @@
             // oscilloscope
             const analyser = audioContext.createAnalyser();
             analyser.fftSize = 2048;
-            microphone.connect(analyser);
 
             // pulse processing
             const pulseProcessor = audioContext.createScriptProcessor(4096, 1, 1);
             pulseProcessor.addEventListener("audioprocess", audioProcessingEvent => {
               processAudioData(audioProcessingEvent);
             });
-            analyser.connect(pulseProcessor);
+
+            // processing chain
+            microphone.connect(analyser).connect(pulseProcessor).connect(audioContext.destination);
 
             renderInterval = setInterval(() => {
               drawScope(analyser);
@@ -184,7 +185,7 @@
           }
 
           for (pulse of pulses) {
-            const bin = pulse / 1 * (histogram.length - 1);
+            const bin = Math.floor(pulse / 1 * (histogram.length - 1));
             if (bin > noise) {
               histogram[bin]++;
             }
