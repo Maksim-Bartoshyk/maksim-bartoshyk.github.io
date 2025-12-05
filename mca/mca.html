@@ -62,7 +62,13 @@
         }
       }
 
-      getDevices();
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          getDevices();
+        })
+        .catch(e => {
+          addDebug(`ERROR: No permission for a microphone - ${e}`)
+        });
     }());
   </script>
   <script>
