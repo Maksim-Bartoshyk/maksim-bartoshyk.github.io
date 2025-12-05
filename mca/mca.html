@@ -12,8 +12,8 @@
     <br>
     <button id="start">Start</button>
     <button id="stop" disabled>Stop</button>
-    <button id="clear">Clear</button>
-    <button id="export">Export</button>
+    <!--<button id="clear">Clear</button>
+    <button id="export">Export</button>-->
     <br>
     <canvas id="scope" width=400 height=100></canvas>
     <br>
@@ -153,13 +153,10 @@
       let prevValue = 0;
       let frontStartValue = 0;
       function processAudioData(audioProcessingEvent) {
-        addDebug(`audio processing event: ${audioProcessingEvent}`);
-
         let inputBuffer = audioProcessingEvent.inputBuffer;
         let inputChannelData = inputBuffer.getChannelData(0);
         if (inputChannelData) {
           const pulses = [];
-          addDebug(`data length: ${inputChannelData.length}`);
           for (i = 0; i < inputChannelData.length; i++) {
             const currentValue = inputChannelData[i] + 1; // from 0 to 2
             if (currentValue > prevValue) {
@@ -170,7 +167,7 @@
               currentFrontPoints++;
             } else {
               if (currentFrontPoints >= minFrontPoints && currentFrontPoints <= maxFrontPoints) {
-                pulses.push(currentValue - frontStartValue);
+                pulses.push(prevValue - frontStartValue);
               } else {
                 frontStartValue = 0;
                 currentFrontPoints = 0;
@@ -180,7 +177,6 @@
             prevValue = currentValue;
           }
 
-          addDebug(`pulses: ${pulses.length}`);
           for (pulse of pulses) {
             const bin = pulse / 1 * (histogram.length - 1);
             if (bin > noise) {
@@ -195,29 +191,33 @@
         const width = ctx.canvas.width;
         const height = ctx.canvas.height;
         const timeData = new Uint8Array(analyser.frequencyBinCount);
-        const scaling = height / 256;
-        let risingEdge = 0;
-        const edgeThreshold = 5;
 
         analyser.getByteTimeDomainData(timeData);
-
+        // Fill solid color
         ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, width, height);
-
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        // Begin the path
         ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgb(0, 200, 0)';
+        ctx.strokeStyle = 'rgb(0 200 0)';
         ctx.beginPath();
+        // Draw each point in the waveform
+        const sliceWidth = WIDTH / bufferLength;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = v * (height / 2);
 
-        // No buffer overrun protection
-        while (timeData[risingEdge++] - 128 > 0 && risingEdge <= width);
-        if (risingEdge >= width) risingEdge = 0;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
 
-        while (timeData[risingEdge++] - 128 < edgeThreshold && risingEdge <= width);
-        if (risingEdge >= width) risingEdge = 0;
+          x += sliceWidth;
+        }
 
-        for (var x = risingEdge; x < timeData.length && x - risingEdge < width; x++)
-          ctx.lineTo(x - risingEdge, height - timeData[x] * scaling);
-
+        // Finish the line
+        ctx.lineTo(WIDTH, HEIGHT / 2);
         ctx.stroke();
       }
 
