@@ -190,9 +190,9 @@
         const ctx = document.getElementById('scope').getContext('2d');
         const width = ctx.canvas.width;
         const height = ctx.canvas.height;
-        const timeData = new Uint8Array(analyser.frequencyBinCount);
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-        analyser.getByteTimeDomainData(timeData);
+        analyser.getByteTimeDomainData(dataArray);
         // Fill solid color
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, width, height);
