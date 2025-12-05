@@ -106,15 +106,18 @@
         minFrontPoints = 4 * audioContext.sampleRate / 44100;
         maxFrontPoints = 12 * audioContext.sampleRate / 44100;
         const constraints = {
-          audio: { deviceId: { exact: audioSource } },
+          audio: {
+            deviceId: { exact: audioSource },
+            autoGainControl: { exact: false },
+          },
           video: false
         };
         navigator.mediaDevices.getUserMedia(constraints)
           .then(stream => {
             const microphone = audioContext.createMediaStreamSource(stream);
 
-            const gainNode = audioContext.createGain();
-            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            // const gainNode = audioContext.createGain();
+            // gainNode.gain.setValueAtTime(1, audioContext.currentTime);
 
             // oscilloscope
             const analyser = audioContext.createAnalyser();
@@ -127,7 +130,7 @@
             });
 
             // processing chain
-            microphone.connect(gainNode).connect(analyser).connect(pulseProcessor).connect(audioContext.destination);
+            microphone/*.connect(gainNode)*/.connect(analyser).connect(pulseProcessor).connect(audioContext.destination);
 
             renderInterval = setInterval(() => {
               drawScope(analyser);
