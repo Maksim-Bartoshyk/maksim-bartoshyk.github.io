@@ -252,8 +252,8 @@
           const bin = histogram[x];
           const binHeight = bin / maxValue * height;
 
-          ctx.moveTo(x, height);
-          ctx.lineTo(x, height - binHeight);
+          ctx.moveTo(x - 0.5, height);
+          ctx.lineTo(x - 0.5, height - binHeight);
         }
 
         ctx.stroke();
