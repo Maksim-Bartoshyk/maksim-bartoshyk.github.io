@@ -153,7 +153,7 @@
       let prevValue = 0;
       let frontStartValue = 0;
       function processAudioData(audioProcessingEvent) {
-        addDebug(`audio processing event: ${inputChannelData}`);
+        addDebug(`audio processing event: ${audioProcessingEvent}`);
 
         let inputBuffer = audioProcessingEvent.inputBuffer;
         let inputChannelData = inputBuffer.getChannelData(0);
