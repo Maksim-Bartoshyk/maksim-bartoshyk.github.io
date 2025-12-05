@@ -185,7 +185,7 @@
           }
 
           for (pulse of pulses) {
-            const bin = Math.floor(pulse / 1 * (histogram.length - 1));
+            const bin = Math.floor(Math.min(pulse, 1) / 1 * (histogram.length - 1));
             if (bin > noise) {
               histogram[bin]++;
             }
