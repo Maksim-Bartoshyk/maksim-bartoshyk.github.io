@@ -6,41 +6,155 @@
 
 <body>
   <div>
-    <canvas id="scope" width=600 height=200></canvas>
+    <div class="select">
+      <label for="audio-source">Audio input source: </label><select id="audio-source"></select>
+    </div>
     <br>
-    <canvas id="histogram" width=2048 height=400></canvas>
+    <button id="start">Start</button>
+    <button id="stop" disabled>Stop</button>
+    <button id="clear">Clear</button>
+    <button id="export">Export</button>
+    <br>
+    <canvas id="scope" width=400 height=100></canvas>
+    <br>
+    <canvas id="histogram" width=1024 height=200></canvas>
     <br>
     <span id="histogram-values"></span>
     <br>
     <pre id="console"></pre>
   </div>
   <script>
+    function addDebug(msg) {
+      document.getElementById('console').innerText += `${msg}\n`;
+    }
+  </script>
+  <script>
+    // input device list
+    (function () {
+      const audioInputSelect = document.querySelector('select#audio-source');
+
+      function getDevices() {
+        navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(e => addDebug(`ERROR: unable to enumerate devices - ${e}`));
+      }
+
+      function gotDevices(deviceInfos) {
+        // Handles being called several times to update labels. Preserve values.
+        const currentValue = audioInputSelect.value;
+        while (audioInputSelect.firstChild) {
+          audioInputSelect.removeChild(audioInputSelect.firstChild);
+        }
+        for (let i = 0; i !== deviceInfos.length; i++) {
+          const deviceInfo = deviceInfos[i];
+          if (deviceInfo.deviceId == '') {
+            continue;
+          }
+
+          if (deviceInfo.kind === 'audioinput') {
+            const option = document.createElement('option');
+            option.value = deviceInfo.deviceId;
+            option.text = deviceInfo.label || `microphone ${audioInputSelect.length + 1}`;
+            audioInputSelect.appendChild(option);
+          }
+        }
+
+        if (Array.prototype.slice.call(audioInputSelect.childNodes).some(n => n.value === currentValue)) {
+          audioInputSelect.value = currentValue;
+        }
+      }
+    }());
+  </script>
+  <script>
+    // start/stop processing
     (async function () {
+      const audioInputSelect = document.querySelector('select#audio-source');
+      const startButton = document.querySelector('button#start');
+      const stopButton = document.querySelector('button#stop');
+      startButton.addEventListener('click', () => startProcessing());
+      stopButton.addEventListener('click', () => stopProcessing());
+
       window.AudioContext = window.AudioContext || window.webkitAudioContext;
-      const audioContext = new AudioContext();
+      let audioContext = undefined;
+      let renderInterval = 0;
+      let minFrontPoints = 0;
+      let maxFrontPoints = 0;
+
+      async function startProcessing() {
+        if (audioContext) {
+          addDebug(`ERROR: Start click while audio context is present`);
+          return;
+        }
+
+        const audioSource = audioInputSelect.value || undefined;
+        if (!audioSource) {
+          addDebug(`ERROR: No available audio source`);
+          return;
+        }
+
+        clearInterval(renderInterval);
+        startButton.disabled = true;
+        stopButton.disabled = false;
+
+        audioContext = new AudioContext();
+        minFrontPoints = 4 * audioContext.sampleRate / 44100;
+        maxFrontPoints = 12 * audioContext.sampleRate / 44100;
+        const constraints = {
+          audio: { deviceId: { exact: audioSource } },
+          video: false
+        };
+        navigator.mediaDevices.getUserMedia(constraints)
+          .then(stream => {
+            const microphone = audioContext.createMediaStreamSource(stream);
+
+            // pulse processing
+            const pulseProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+            pulseProcessor.addEventListener("audioprocess", audioProcessingEvent => {
+              processAudioData(audioProcessingEvent);
+            });
+            microphone.connect(pulseProcessor);
+
+            // oscilloscope
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
+            pulseProcessor.connect(analyser);
+
+            renderInterval = setInterval(() => {
+              drawScope(analyser);
+              drawHistogram();
+            }, 100);
+          })
+          .catch(e => {
+            addDebug(`ERROR: Unable to start media - ${e}`);
+            startButton.disabled = false;
+            stopButton.disabled = true;
+          })
+      }
+
+      async function stopProcessing() {
+        if (!audioContext) {
+          addDebug(`ERROR: No audio context while stopping`);
+          return;
+        }
+
+        audioContext.close();
+        audioContext = undefined;
+        startButton.disabled = false;
+        stopButton.disabled = true;
+      }
 
       // histogram
-      const channels = 2048;
+      const channels = 1024;
       const histogram = new Array(channels).fill(0);
       const noise = 30;
 
-      // oscilloscope
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-
       // pulse processor
-      const pulseProcessor2 = audioContext.createScriptProcessor(4096, 1, 1);
-
-      const minFrontPoints = 4;
-      const maxFrontPoints = 12;
       let currentFrontPoints = 0;
       let prevValue = 0;
       let frontStartValue = 0;
-      pulseProcessor2.addEventListener("audioprocess", (audioProcessingEvent) => {
+      function processAudioData(audioProcessingEvent) {
+        addDebug(`audio processing event: ${inputChannelData}`);
+
         let inputBuffer = audioProcessingEvent.inputBuffer;
         let inputChannelData = inputBuffer.getChannelData(0);
-        addDebug(`data: ${inputChannelData}`);
-
         if (inputChannelData) {
           const pulses = [];
           addDebug(`data length: ${inputChannelData.length}`);
@@ -72,25 +186,6 @@
             }
           }
         }
-      });
-
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then((stream) => {
-          const microphone = audioContext.createMediaStreamSource(stream);
-          microphone.connect(pulseProcessor2);
-          microphone.connect(analyser);
-        })
-        .catch(e => {
-          addDebug(`ERROR: unable to start microphone: ${e}`);
-        });
-
-      draw();
-
-      function draw() {
-        drawScope(analyser);
-        drawHistogram();
-
-        setTimeout(() => requestAnimationFrame(draw), 1000);
       }
 
       function drawScope(analyser) {
@@ -104,7 +199,7 @@
 
         analyser.getByteTimeDomainData(timeData);
 
-        ctx.fillStyle = 'rgba(0, 20, 0, 0.1)';
+        ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, width, height);
 
         ctx.lineWidth = 2;
@@ -129,7 +224,7 @@
         const ctx = document.getElementById('histogram').getContext('2d');
         ctx.canvas.width = histogram.length;
         const height = ctx.canvas.height;
-        ctx.fillStyle = 'rgba(0, 20, 0, 0.1)';
+        ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, ctx.canvas.width, height);
 
         ctx.lineWidth = 1;
@@ -153,10 +248,6 @@
         }
 
         ctx.stroke();
-      }
-
-      function addDebug(msg) {
-        document.getElementById('console').innerText += `${msg}\n`;
       }
     }());
   </script>
