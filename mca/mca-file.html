@@ -64,7 +64,7 @@
       // histogram
       const channels = 1024;
       const histogram = new Array(channels).fill(0);
-      const noise = 30;
+      const noise = 15;
 
       // pulse processor
       let currentFrontPoints = 0;
@@ -125,7 +125,7 @@
 
         for (var x = 0; x < histogram.length; x++) {
           const bin = histogram[x];
-          const binHeight = bin / maxValue * height;
+          const binHeight = Math.sqrt(bin) / Math.sqrt(maxValue) * height;
 
           ctx.moveTo(x - 0.5, height);
           ctx.lineTo(x - 0.5, height - binHeight);
