@@ -123,7 +123,7 @@
             // oscilloscope
             const analyser = audioContext.createAnalyser();
             analyser.fftSize = 2048;
-            pulseProcessor.connect(analyser);
+            microphone.connect(analyser);
 
             renderInterval = setInterval(() => {
               drawScope(analyser);
