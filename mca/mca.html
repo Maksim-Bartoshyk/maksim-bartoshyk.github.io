@@ -37,6 +37,7 @@
     .form-field label {
       font-size: 14px;
       white-space: nowrap;
+      min-width: 40px;
     }
 
     .form-field select,
@@ -49,6 +50,7 @@
       border: 1px solid #bbb;
       border-radius: 4px;
       height: 32px;
+      min-width: 0;
     }
 
     .settings-group {
@@ -321,6 +323,22 @@
       let histogram = new Array(parseInt(channelCountSelect.value)).fill(0);
       let totalTime = 0;
       let totalCounts = 0;
+      let yScale = 'sqrt';
+
+      document.querySelector('.stats').addEventListener('click', () => {
+        toggleYScale();
+      });
+
+      function toggleYScale() {
+        if (yScale === 'sqrt') {
+          yScale = 'log';
+        } else if (yScale === 'log') {
+          yScale = 'lin';
+        } else {
+          yScale = 'sqrt';
+        }
+        drawHistogram();
+      }
 
       function resetHistogram(force) {
         if (!force && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
@@ -538,7 +556,7 @@
 
         const inputChannelData = inputBuffer.getChannelData(0).slice(-Math.min(width * xScale, inputBuffer.length));
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, width, height);
         ctx.lineWidth = 1;
         ctx.strokeStyle = 'white';
@@ -546,7 +564,20 @@
         const sliceWidth = width / inputChannelData.length;
         let x = 0;
         for (let i = 0; i < inputChannelData.length; i++) {
-          const v = inputChannelData[i] + 1; // from 0 to 2
+          const isNegative = inputChannelData[i] < 0;
+          let absValue = Math.abs(inputChannelData[i]);
+          let scaledValue = Math.sqrt(absValue) / Math.sqrt(1);
+          if (yScale === 'lin') {
+            scaledValue = absValue;
+          }
+          if (yScale === 'log') {
+            scaledValue = Math.log10(absValue * 200 + 1) / Math.log10(201);
+          }
+          if (isNegative) {
+            scaledValue = -scaledValue;
+          }
+
+          const v = scaledValue + 1; // from 0 to 2
           const y = height - v * (height / 2);
 
           if (i === 0) {
@@ -588,6 +619,8 @@
         for (let channel = 0; channel < width; channel += 100) {
           ctx.fillText(channel.toString(), channel, height - 16);
         }
+
+        ctx.fillText(yScale, 16, 8);
       }
 
       function drawHistogram() {
@@ -612,11 +645,24 @@
             maxValue = bin;
           }
         }
-        maxValue *= 1.1;
+        const overheadFactor = 1.1;
+        if (yScale === 'sqrt') {
+          maxValue *= overheadFactor * overheadFactor;
+        } else if (yScale === 'log') {
+          maxValue *= Math.pow(maxValue, overheadFactor - 1);
+        } else {
+          maxValue *= overheadFactor;
+        }
 
         for (var x = 0; x < histogram.length; x++) {
           const bin = histogram[x];
-          const binHeight = maxValue > 0 ? (Math.sqrt(bin) / Math.sqrt(maxValue) * height) : 0;
+          let binHeight = maxValue > 0 ? (Math.sqrt(bin) / Math.sqrt(maxValue) * height) : 0;
+          if (yScale === 'lin') {
+            binHeight = maxValue > 0 ? (bin / maxValue * height) : 0;
+          }
+          if (yScale === 'log') {
+            binHeight = maxValue > 1 ? (Math.log10(bin + 1) / Math.log10(maxValue + 1) * height) : 0;
+          }
 
           ctx.moveTo(x - 0.5, height);
           ctx.lineTo(x - 0.5, height - binHeight);
