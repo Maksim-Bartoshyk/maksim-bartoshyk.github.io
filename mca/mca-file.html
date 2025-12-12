@@ -1,0 +1,147 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+  <div>
+    <input id="file-input" type="file">
+    <br>
+    <canvas id="histogram" width=1024 height=200></canvas>
+    <br>
+    <span id="histogram-values"></span>
+    <br>
+    <pre id="console"></pre>
+  </div>
+  <script>
+    function addDebug(msg) {
+      document.getElementById('console').innerText += `${msg}\n`;
+    }
+  </script>
+  <script>
+    // input device list
+    (function () {
+      const audioFileInput = document.getElementById('file-input');
+
+      audioFileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const arrayBuffer = e.target.result;
+            await decodeAudioData(arrayBuffer);
+          };
+          reader.readAsArrayBuffer(file);
+        }
+      });
+
+      let audioContext;
+      let minFrontPoints = 0;
+      let maxFrontPoints = 0;
+      async function decodeAudioData(arrayBuffer) {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        try {
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+          addDebug(`Sample Rate: ${audioBuffer.sampleRate}`);
+          addDebug(`Number of Channels: ${audioBuffer.numberOfChannels}`);
+          addDebug(`Duration: ${audioBuffer.duration}`);
+
+          minFrontPoints = 4 * audioBuffer.sampleRate / 44100;
+          maxFrontPoints = 12 * audioBuffer.sampleRate / 44100;
+          time = audioBuffer.duration;
+          histogram.fill(0);
+          processAudioData(audioBuffer);
+          drawHistogram();
+        } catch (err) {
+          addDebug(`Error decoding audio data: ${err}`);
+        }
+      }
+
+      // histogram
+      const noise = 4;
+      const channels = 1024;
+      const histogram = new Array(channels).fill(0);
+      let time = 0;
+
+
+      // pulse processor
+      let currentFrontPoints = 0;
+      let prevValue = 0;
+      let frontStartValue = 0;
+      function processAudioData(inputBuffer) {
+        let inputChannelData = inputBuffer.getChannelData(0);
+        if (inputChannelData) {
+          const pulses = [];
+          for (i = 0; i < inputChannelData.length; i++) {
+            const currentValue = inputChannelData[i] + 1; // from 0 to 2
+            if (currentValue > prevValue) {
+              if (currentFrontPoints === 0) {
+                frontStartValue = currentValue;
+              }
+
+              currentFrontPoints++;
+            } else {
+              if (currentFrontPoints >= minFrontPoints && currentFrontPoints <= maxFrontPoints) {
+                pulses.push(prevValue - frontStartValue);
+              }
+
+              frontStartValue = 0;
+              currentFrontPoints = 0;
+            }
+
+            prevValue = currentValue;
+          }
+
+          for (pulse of pulses) {
+            const bin = Math.floor(Math.min(pulse, 1) / 1 * (histogram.length - 1));
+            if (bin > noise) {
+              histogram[bin]++;
+            }
+          }
+        }
+      }
+
+      function drawHistogram() {
+        document.getElementById('histogram-values').innerText = JSON.stringify(histogram);
+        const ctx = document.getElementById('histogram').getContext('2d');
+        ctx.canvas.width = histogram.length;
+        const height = ctx.canvas.height;
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, ctx.canvas.width, height);
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgb(0, 200, 0)';
+        ctx.beginPath();
+
+        let maxValue = 0;
+        let totalPulses = 0;
+        for (const bin of histogram) {
+          totalPulses += bin;
+          if (bin > maxValue) {
+            maxValue = bin;
+          }
+        }
+        maxValue *= 1.1;
+
+        for (var x = 0; x < histogram.length; x++) {
+          const bin = histogram[x];
+          const binHeight = Math.sqrt(bin) / Math.sqrt(maxValue) * height;
+
+          ctx.moveTo(x - 0.5, height);
+          ctx.lineTo(x - 0.5, height - binHeight);
+        }
+
+        ctx.stroke();
+
+        document.getElementById('cps').innerText = `Time: ${time.toFixed(2)} s, cps = ${(time > 0) ? (totalPulses / time).toFixed(2) : '0'}`;
+      }
+    }());
+  </script>
+</body>
+
+</html>

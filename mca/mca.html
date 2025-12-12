@@ -1,0 +1,609 @@
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #000;
+      color: #bbb;
+      overflow-x: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #top-block {
+      padding: 10px;
+      background: #111;
+      flex-shrink: 0;
+    }
+
+    .control-row {
+      margin-bottom: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .control-row label {
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .control-row select,
+    .control-row input {
+      flex: 1;
+      padding: 8px;
+      font-size: 14px;
+      background: #222;
+      color: #bbb;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      background: #bbb;
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    button:active:not(:disabled) {
+      opacity: 0.7;
+    }
+
+    #stats {
+      font-size: 14px;
+      padding: 8px;
+      background: #1a1a1a;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    #canvas-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    #oscilloscope-wrapper {
+      height: 25%;
+      overflow: hidden;
+    }
+
+    #oscilloscope {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #histogram-wrapper {
+      height: 75%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    #histogram {
+      display: block;
+      height: 100%;
+    }
+
+    #console {
+      padding: 10px;
+      font-size: 12px;
+      color: #bbb;
+      background: #000;
+      max-height: 150px;
+      overflow-y: auto;
+      border-top: 1px solid #bbb;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    @media (orientation: landscape) {
+      #oscilloscope-wrapper {
+        display: none;
+      }
+
+      #histogram-wrapper {
+        height: 100%;
+      }
+
+      #top-block {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .button-row {
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        margin-bottom: 0;
+      }
+
+      .control-row:first-child {
+        grid-column: 1 / -1;
+      }
+
+      .control-row {
+        margin-bottom: 0;
+      }
+
+      .button-row:last-of-type {
+        display: none;
+      }
+
+      #stats {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="top-block">
+    <div class="control-row">
+      <label for="audio-source">Input:</label>
+      <select id="audio-source"></select>
+    </div>
+
+    <div class="button-row">
+      <button id="start">Start</button>
+      <button id="stop" disabled>Stop</button>
+      <button id="reset">Reset</button>
+      <button id="export">Export</button>
+    </div>
+
+    <div class="control-row">
+      <label for="noise-input">Noise:</label>
+      <input type="number" id="noise-input" value="4" min="0" max="4095">
+    </div>
+
+    <div class="control-row">
+      <label for="channel-count">Channels:</label>
+      <select id="channel-count">
+        <option value="1024" selected>1024</option>
+        <option value="2048">2048</option>
+        <option value="4096">4096</option>
+      </select>
+    </div>
+
+    <div id="stats">
+      <span id="cps">Time: 0.00 s | Counts: 0 | CPS: 0.00</span>
+    </div>
+  </div>
+
+  <div id="canvas-container">
+    <div id="oscilloscope-wrapper">
+      <canvas id="oscilloscope"></canvas>
+    </div>
+    <div id="histogram-wrapper">
+      <canvas id="histogram"></canvas>
+    </div>
+  </div>
+
+  <pre id="console"></pre>
+  <script>
+    function addDebug(msg) {
+      document.getElementById('console').innerText += `${msg}\n`;
+    }
+  </script>
+  <script>
+    // input device list
+    (function () {
+      const audioInputSelect = document.querySelector('select#audio-source');
+
+      function getDevices() {
+        navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(e => addDebug(`ERROR: unable to enumerate devices - ${e}`));
+      }
+
+      function gotDevices(deviceInfos) {
+        // Handles being called several times to update labels. Preserve values.
+        const currentValue = audioInputSelect.value;
+        while (audioInputSelect.firstChild) {
+          audioInputSelect.removeChild(audioInputSelect.firstChild);
+        }
+        for (let i = 0; i !== deviceInfos.length; i++) {
+          const deviceInfo = deviceInfos[i];
+          if (deviceInfo.deviceId == '') {
+            continue;
+          }
+
+          if (deviceInfo.kind === 'audioinput') {
+            const option = document.createElement('option');
+            option.value = deviceInfo.deviceId;
+            option.text = deviceInfo.label || `microphone ${audioInputSelect.length + 1}`;
+            audioInputSelect.appendChild(option);
+          }
+        }
+
+        if (Array.prototype.slice.call(audioInputSelect.childNodes).some(n => n.value === currentValue)) {
+          audioInputSelect.value = currentValue;
+        }
+      }
+
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          getDevices();
+        })
+        .catch(e => {
+          addDebug(`ERROR: No permission for a microphone - ${e}`)
+        });
+    }());
+  </script>
+  <script>
+    // start/stop processing
+    (async function () {
+      const audioInputSelect = document.querySelector('select#audio-source');
+      const startButton = document.querySelector('button#start');
+      const stopButton = document.querySelector('button#stop');
+      const resetButton = document.querySelector('button#reset');
+      const exportButton = document.querySelector('button#export');
+      const noiseInput = document.querySelector('input#noise-input');
+      const channelCountSelect = document.querySelector('select#channel-count');
+
+      startButton.addEventListener('click', () => startProcessing());
+      stopButton.addEventListener('click', () => stopProcessing());
+      resetButton.addEventListener('click', () => resetHistogram());
+      exportButton.addEventListener('click', () => exportData());
+      channelCountSelect.addEventListener('change', () => handleChannelCountChange());
+
+      window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      let audioContext = undefined;
+      let wakeLock = undefined;
+      const minFrontPointsDefault = 4;
+      const maxFrontPointsDefault = 12;
+
+      // histogram
+      let histogram = new Array(parseInt(channelCountSelect.value)).fill(0);
+      let totalTime = 0;
+      let totalCounts = 0;
+
+      function resetHistogram(force) {
+        if (!force && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
+          return;
+        }
+        const channels = parseInt(channelCountSelect.value);
+        histogram = new Array(channels).fill(0);
+        totalTime = 0;
+        totalCounts = 0;
+        drawHistogram();
+      }
+
+      function handleChannelCountChange() {
+        if (totalCounts > 0 && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
+          channelCountSelect.value = histogram.length;
+          return;
+        }
+        const oldChannels = histogram.length;
+        const newChannels = parseInt(channelCountSelect.value);
+        const currentNoise = parseInt(noiseInput.value);
+        const newNoise = Math.round(currentNoise * newChannels / oldChannels);
+        noiseInput.value = newNoise;
+        resetHistogram(true);
+      }
+
+      function exportData() {
+        const utcDatetime = new Date().toISOString().split('.')[0].replace(/[:]/g, '-') + 'Z';
+        const defaultFilename = `mca_data_${utcDatetime}`;
+        const filename = prompt('Enter filename for export:', defaultFilename);
+
+        if (filename === null) {
+          addDebug('Export cancelled.');
+          return;
+        }
+
+        if (!filename) {
+          addDebug('Export failed: filename cannot be empty.');
+          return;
+        }
+
+        let csvContent = `Channel,Counts (per ${totalTime.toFixed(1)} s)\n`;
+        for (let i = 0; i < histogram.length; i++) {
+          csvContent += `${i},${histogram[i]}\n`;
+        }
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addDebug('Data exported');
+      }
+
+      function setControlsEnabled(isRecording) {
+        audioInputSelect.disabled = isRecording;
+        startButton.disabled = isRecording;
+        resetButton.disabled = isRecording;
+        exportButton.disabled = isRecording;
+        channelCountSelect.disabled = isRecording;
+        stopButton.disabled = !isRecording;
+      }
+
+      // Canvas sizing
+      function resizeCanvases() {
+        const oscilloscope = document.getElementById('oscilloscope');
+        const histogram = document.getElementById('histogram');
+        const oscilloscopeWrapper = document.getElementById('oscilloscope-wrapper');
+        const histogramWrapper = document.getElementById('histogram-wrapper');
+
+        oscilloscope.width = oscilloscopeWrapper.clientWidth;
+        oscilloscope.height = oscilloscopeWrapper.clientHeight;
+
+        histogram.width = parseInt(channelCountSelect.value);
+        histogram.height = histogramWrapper.clientHeight;
+      }
+
+      window.addEventListener('resize', () => {
+        resizeCanvases();
+        drawHistogram();
+      });
+      resizeCanvases();
+      drawHistogram();
+
+      async function startProcessing() {
+        if (audioContext) {
+          addDebug(`ERROR: Start click while audio context is present`);
+          return;
+        }
+
+        const audioSource = audioInputSelect.value || undefined;
+        if (!audioSource) {
+          addDebug(`ERROR: No available audio source`);
+          return;
+        }
+
+        setControlsEnabled(true);
+
+        audioContext = new AudioContext();
+        const constraints = {
+          audio: {
+            deviceId: { exact: audioSource },
+            echoCancellation: false,
+            autoGainControl: false,
+            noiseSuppression: false,
+            sampleRate: 44100
+          },
+          video: false
+        };
+        navigator.mediaDevices.getUserMedia(constraints)
+          .then(stream => {
+            const microphone = audioContext.createMediaStreamSource(stream);
+            const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+            scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
+              const inputBuffer = audioProcessingEvent.inputBuffer;
+              totalTime += inputBuffer.duration;
+              processAudioData(inputBuffer);
+              drawOscilloscope(inputBuffer);
+              drawHistogram();
+            };
+            microphone.connect(scriptProcessor);
+            scriptProcessor.connect(audioContext.destination);
+          })
+          .catch(e => {
+            addDebug(`ERROR: Unable to start media - ${e}`);
+            setControlsEnabled(false);
+          });
+
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {
+          // The request failed, likely due to a system setting (e.g., low battery)
+          addDebug(`Error acquiring wake lock: ${err}`);
+        }
+      }
+
+      document.addEventListener('touchstart', async () => {
+        if (wakeLock === undefined) {
+          return;
+        }
+
+        try {
+          await wakeLock.release();
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {
+          addDebug(`Error reacquiring wake lock: ${err}`);
+        }
+      });
+
+      async function stopProcessing() {
+        if (!audioContext) {
+          addDebug(`ERROR: No audio context while stopping`);
+          return;
+        }
+
+        audioContext.close();
+        audioContext = undefined;
+        setControlsEnabled(false);
+
+        if (wakeLock) {
+          await wakeLock.release();
+          wakeLock = undefined;
+        }
+      }
+
+      // pulse processor
+      let currentFrontPoints = 0;
+      let prevValue = 0;
+      let frontStartValue = 0;
+      function processAudioData(inputBuffer) {
+        const inputChannelData = inputBuffer.getChannelData(0);
+        const minFrontPoints = minFrontPointsDefault * inputBuffer.sampleRate / 44100;
+        const maxFrontPoints = maxFrontPointsDefault * inputBuffer.sampleRate / 44100;
+        if (inputChannelData) {
+          const pulses = [];
+          for (i = 0; i < inputChannelData.length; i++) {
+            const currentValue = inputChannelData[i] + 1; // from 0 to 2
+            if (currentValue > prevValue) {
+              if (currentFrontPoints === 0) {
+                frontStartValue = prevValue;
+              }
+
+              currentFrontPoints++;
+            } else {
+              if (currentFrontPoints >= minFrontPoints && currentFrontPoints <= maxFrontPoints) {
+                pulses.push(prevValue - frontStartValue);
+              }
+
+              frontStartValue = 0;
+              currentFrontPoints = 0;
+            }
+
+            prevValue = currentValue;
+          }
+
+          const noise = parseInt(noiseInput.value);
+          for (pulse of pulses) {
+            const bin = Math.floor(Math.min(pulse, 1) / 1 * (histogram.length - 1));
+            if (bin > noise) {
+              histogram[bin]++;
+              totalCounts++;
+            }
+          }
+        }
+      }
+
+      function drawOscilloscope(inputBuffer) {
+        const canvas = document.getElementById('oscilloscope');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        const xScale = 3;
+
+        if (width === 0 || height === 0) return;
+
+        const inputChannelData = inputBuffer.getChannelData(0).slice(-Math.min(width * xScale, inputBuffer.length));
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'white';
+        ctx.beginPath();
+        const sliceWidth = width / inputChannelData.length;
+        let x = 0;
+        for (let i = 0; i < inputChannelData.length; i++) {
+          const v = inputChannelData[i] + 1; // from 0 to 2
+          const y = height - v * (height / 2);
+
+          if (i === 0) {
+            ctx.moveTo(x, y - 0.5);
+          } else {
+            ctx.lineTo(x, y - 0.5);
+          }
+
+          x += sliceWidth;
+        }
+
+        ctx.stroke();
+      }
+
+      function drawChannelTicks(ctx, width, height) {
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgb(128, 128, 128)';
+        ctx.beginPath();
+
+        for (let channel = 0; channel < width; channel++) {
+          if (channel % 100 === 0) {
+            // Major tick every 100 channels
+            ctx.moveTo(channel - 0.5, height);
+            ctx.lineTo(channel - 0.5, height - 6);
+          } else if (channel % 50 === 0) {
+            // Minor tick every 50 channels
+            ctx.moveTo(channel - 0.5, height);
+            ctx.lineTo(channel - 0.5, height - 3);
+          }
+        }
+
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgb(128, 128, 128)';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+
+        for (let channel = 0; channel < width; channel += 100) {
+          ctx.fillText(channel.toString(), channel, height - 16);
+        }
+      }
+
+      function drawHistogram() {
+        const canvas = document.getElementById('histogram');
+        const ctx = canvas.getContext('2d');
+        canvas.width = histogram.length;
+        const width = canvas.width;
+        const height = canvas.height;
+
+        if (height === 0) return;
+
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'white';
+        ctx.beginPath();
+
+        let maxValue = 0;
+        for (const bin of histogram) {
+          if (bin > maxValue) {
+            maxValue = bin;
+          }
+        }
+        maxValue *= 1.1;
+
+        for (var x = 0; x < histogram.length; x++) {
+          const bin = histogram[x];
+          const binHeight = maxValue > 0 ? (Math.sqrt(bin) / Math.sqrt(maxValue) * height) : 0;
+
+          ctx.moveTo(x - 0.5, height);
+          ctx.lineTo(x - 0.5, height - binHeight);
+        }
+
+        ctx.stroke();
+
+        drawChannelTicks(ctx, width, height);
+
+        let cps = totalTime > 0 ? (totalCounts / totalTime) : 0;
+        if (cps < 10) {
+          cps = cps.toFixed(3);
+        } else if (cps < 100) {
+          cps = cps.toFixed(2);
+        } else if (cps < 1000) {
+          cps = cps.toFixed(1);
+        } else {
+          cps = Math.round(cps);
+        }
+        document.getElementById('cps').innerText = `Time: ${totalTime.toFixed(1)} s | Counts: ${totalCounts} | CPS: ${cps}`;
+      }
+    }());
+  </script>
+</body>
+
+</html>
