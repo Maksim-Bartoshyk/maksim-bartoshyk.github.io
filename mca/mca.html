@@ -3,6 +3,7 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
+    /* Base styles */
     * {
       margin: 0;
       padding: 0;
@@ -19,36 +20,50 @@
       flex-direction: column;
     }
 
-    #top-block {
+    /* Controls section */
+    .controls {
       padding: 10px;
       background: #111;
       flex-shrink: 0;
     }
 
-    .control-row {
+    .form-field {
       margin-bottom: 10px;
       display: flex;
       gap: 10px;
       align-items: center;
     }
 
-    .control-row label {
+    .form-field label {
       font-size: 14px;
       white-space: nowrap;
     }
 
-    .control-row select,
-    .control-row input {
+    .form-field select,
+    .form-field input {
       flex: 1;
-      padding: 8px;
+      padding: 2px;
       font-size: 14px;
       background: #222;
       color: #bbb;
       border: 1px solid #bbb;
       border-radius: 4px;
+      height: 32px;
     }
 
-    .button-row {
+    .settings-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .settings-group .form-field {
+      margin-bottom: 0;
+    }
+
+    /* Buttons */
+    .actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
@@ -76,7 +91,14 @@
       opacity: 0.7;
     }
 
-    #stats {
+    .btn-icon {
+      font-size: 14px;
+      min-width: 40px;
+      flex-shrink: 0;
+    }
+
+    /* Stats display */
+    .stats {
       font-size: 14px;
       padding: 8px;
       background: #1a1a1a;
@@ -84,7 +106,8 @@
       text-align: center;
     }
 
-    #canvas-container {
+    /* Visualization area */
+    .visualization {
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -92,33 +115,32 @@
       min-height: 0;
     }
 
-    #oscilloscope-wrapper {
-      height: 25%;
+    .chart-wrapper {
       overflow: hidden;
     }
 
-    #oscilloscope {
-      display: block;
-      width: 100%;
-      height: 100%;
+    .waveform {
+      height: 25%;
     }
 
-    #histogram-wrapper {
+    .spectrum {
       height: 75%;
       overflow-x: auto;
-      overflow-y: hidden;
     }
 
-    #histogram {
+    canvas {
       display: block;
       height: 100%;
     }
 
-    #console {
+    .waveform canvas {
+      width: 100%;
+    }
+
+    /* Console */
+    .console {
       padding: 10px;
       font-size: 12px;
-      color: #bbb;
-      background: #000;
       max-height: 150px;
       overflow-y: auto;
       border-top: 1px solid #bbb;
@@ -126,41 +148,47 @@
       word-break: break-word;
     }
 
+    /* Landscape layout */
     @media (orientation: landscape) {
-      #oscilloscope-wrapper {
+      .waveform {
         display: none;
       }
 
-      #histogram-wrapper {
+      .spectrum {
         height: 100%;
       }
 
-      #top-block {
+      .controls {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
         align-items: start;
       }
 
-      .button-row {
+      .form-field {
+        margin-bottom: 0;
+      }
+
+      .form-field:first-child {
+        grid-column: 1 / -1;
+      }
+
+      .settings-group {
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+
+      .settings-group .form-field {
+        grid-column: span 2;
+      }
+
+      .actions {
         grid-column: 1 / -1;
         grid-template-columns: 1fr 1fr 1fr 1fr;
         margin-bottom: 0;
       }
 
-      .control-row:first-child {
-        grid-column: 1 / -1;
-      }
-
-      .control-row {
-        margin-bottom: 0;
-      }
-
-      .button-row:last-of-type {
-        display: none;
-      }
-
-      #stats {
+      .stats {
         grid-column: 1 / -1;
       }
     }
@@ -168,51 +196,54 @@
 </head>
 
 <body>
-  <div id="top-block">
-    <div class="control-row">
+  <div class="controls">
+    <div class="form-field">
       <label for="audio-source">Input:</label>
       <select id="audio-source"></select>
+      <button id="refresh-inputs" class="btn-icon">Refresh</button>
     </div>
 
-    <div class="button-row">
+    <div class="settings-group">
+      <div class="form-field">
+        <label for="noise-input">Noise:</label>
+        <input type="number" id="noise-input" value="4" min="0" max="4095">
+      </div>
+
+      <div class="form-field">
+        <label for="channel-count">Channels:</label>
+        <select id="channel-count">
+          <option value="1024" selected>1024</option>
+          <option value="2048">2048</option>
+          <option value="4096">4096</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
       <button id="start">Start</button>
       <button id="stop" disabled>Stop</button>
       <button id="reset">Reset</button>
       <button id="export">Export</button>
     </div>
 
-    <div class="control-row">
-      <label for="noise-input">Noise:</label>
-      <input type="number" id="noise-input" value="4" min="0" max="4095">
-    </div>
-
-    <div class="control-row">
-      <label for="channel-count">Channels:</label>
-      <select id="channel-count">
-        <option value="1024" selected>1024</option>
-        <option value="2048">2048</option>
-        <option value="4096">4096</option>
-      </select>
-    </div>
-
-    <div id="stats">
-      <span id="cps">Time: 0.00 s | Counts: 0 | CPS: 0.00</span>
+    <div class="stats">
+      <span class="stats-text">Time: 0.00 s | Counts: 0 | CPS: 0.00</span>
     </div>
   </div>
 
-  <div id="canvas-container">
-    <div id="oscilloscope-wrapper">
+  <div class="visualization">
+    <div class="chart-wrapper waveform">
       <canvas id="oscilloscope"></canvas>
     </div>
-    <div id="histogram-wrapper">
+    <div class="chart-wrapper spectrum">
       <canvas id="histogram"></canvas>
     </div>
   </div>
 
-  <pre id="console"></pre>
+  <pre class="console"></pre>
   <script>
     function addDebug(msg) {
-      document.getElementById('console').innerText += `${msg}\n`;
+      document.querySelector('.console').innerText += `${msg}\n`;
     }
   </script>
   <script>
@@ -256,6 +287,11 @@
         .catch(e => {
           addDebug(`ERROR: No permission for a microphone - ${e}`)
         });
+
+      const refreshButton = document.querySelector('button#refresh-inputs');
+      refreshButton.addEventListener('click', () => {
+        getDevices();
+      });
     }());
   </script>
   <script>
@@ -352,8 +388,8 @@
       function resizeCanvases() {
         const oscilloscope = document.getElementById('oscilloscope');
         const histogram = document.getElementById('histogram');
-        const oscilloscopeWrapper = document.getElementById('oscilloscope-wrapper');
-        const histogramWrapper = document.getElementById('histogram-wrapper');
+        const oscilloscopeWrapper = document.querySelector('.waveform');
+        const histogramWrapper = document.querySelector('.spectrum');
 
         oscilloscope.width = oscilloscopeWrapper.clientWidth;
         oscilloscope.height = oscilloscopeWrapper.clientHeight;
@@ -600,7 +636,7 @@
         } else {
           cps = Math.round(cps);
         }
-        document.getElementById('cps').innerText = `Time: ${totalTime.toFixed(1)} s | Counts: ${totalCounts} | CPS: ${cps}`;
+        document.querySelector('.stats-text').innerText = `Time: ${totalTime.toFixed(1)} s | Counts: ${totalCounts} | CPS: ${cps}`;
       }
     }());
   </script>
