@@ -3,7 +3,6 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
-    /* Base styles */
     * {
       margin: 0;
       padding: 0;
@@ -20,61 +19,60 @@
       flex-direction: column;
     }
 
-    /* Controls section */
     .controls {
-      padding: 10px;
+      padding: 8px;
       background: #111;
       flex-shrink: 0;
     }
 
     .form-field {
-      margin-bottom: 10px;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
+      margin-bottom: 6px;
     }
 
     .form-field label {
       font-size: 14px;
       white-space: nowrap;
-      min-width: 40px;
+      min-width: 38px;
     }
 
     .form-field select,
     .form-field input {
       flex: 1;
+      min-width: 0;
+      height: 28px;
       padding: 2px;
-      font-size: 14px;
+      font-size: 13px;
       background: #222;
       color: #bbb;
       border: 1px solid #bbb;
       border-radius: 4px;
-      height: 32px;
-      min-width: 0;
     }
 
     .settings-group {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 6px;
     }
 
     .settings-group .form-field {
       margin-bottom: 0;
+      min-width: 0;
     }
 
-    /* Buttons */
     .actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 8px;
+      margin-bottom: 4px;
     }
 
     button {
-      padding: 8px;
-      font-size: 16px;
+      padding: 6px;
+      font-size: 14px;
       font-weight: bold;
       background: #bbb;
       color: #000;
@@ -94,21 +92,23 @@
     }
 
     .btn-icon {
-      font-size: 14px;
-      min-width: 40px;
       flex-shrink: 0;
+      min-width: 40px;
+      font-size: 14px;
     }
 
-    /* Stats display */
     .stats {
-      font-size: 14px;
-      padding: 8px;
+      padding: 4px;
+      font-size: 12px;
+      text-align: center;
       background: #1a1a1a;
       border-radius: 4px;
-      text-align: center;
     }
 
-    /* Visualization area */
+    .input-row {
+      display: contents;
+    }
+
     .visualization {
       flex: 1;
       display: flex;
@@ -117,12 +117,9 @@
       min-height: 0;
     }
 
-    .chart-wrapper {
-      overflow: hidden;
-    }
-
     .waveform {
       height: 25%;
+      overflow: hidden;
     }
 
     .spectrum {
@@ -139,18 +136,16 @@
       width: 100%;
     }
 
-    /* Console */
     .console {
+      max-height: 150px;
       padding: 10px;
       font-size: 12px;
-      max-height: 150px;
       overflow-y: auto;
       border-top: 1px solid #bbb;
       white-space: pre-wrap;
       word-break: break-word;
     }
 
-    /* Landscape layout */
     @media (orientation: landscape) {
       .waveform {
         display: none;
@@ -161,37 +156,43 @@
       }
 
       .controls {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        align-items: start;
+        display: block;
       }
 
-      .form-field {
+      .form-field,
+      .actions,
+      .settings-group {
         margin-bottom: 0;
       }
 
-      .form-field:first-child {
-        grid-column: 1 / -1;
+      .input-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 6px;
       }
 
-      .settings-group {
-        grid-column: 1 / -1;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
+      .input-row .form-field {
+        margin-bottom: 0;
       }
 
-      .settings-group .form-field {
-        grid-column: span 2;
+      .input-row>.form-field:first-child {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .input-row .settings-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .input-row .settings-group .form-field {
+        min-width: 0;
+        flex: 1;
       }
 
       .actions {
-        grid-column: 1 / -1;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
-        margin-bottom: 0;
-      }
-
-      .stats {
-        grid-column: 1 / -1;
+        grid-template-columns: repeat(4, 1fr);
       }
     }
   </style>
@@ -199,25 +200,28 @@
 
 <body>
   <div class="controls">
-    <div class="form-field">
-      <label for="audio-source">Input:</label>
-      <select id="audio-source"></select>
-      <button id="refresh-inputs" class="btn-icon">Refresh</button>
-    </div>
-
-    <div class="settings-group">
+    <div class="input-row">
       <div class="form-field">
-        <label for="noise-input">Noise:</label>
-        <input type="number" id="noise-input" value="4" min="0" max="4095">
+        <label for="audio-source">Input:</label>
+        <select id="audio-source"></select>
+        <button id="refresh-inputs" class="btn-icon">Refresh</button>
       </div>
 
-      <div class="form-field">
-        <label for="channel-count">Channels:</label>
-        <select id="channel-count">
-          <option value="1024" selected>1024</option>
-          <option value="2048">2048</option>
-          <option value="4096">4096</option>
-        </select>
+      <div class="settings-group">
+        <div class="form-field">
+          <label for="lld-input">LLD:</label>
+          <input type="number" id="lld-input" value="0.005" min="0" max="1" step="0.001">
+        </div>
+
+        <div class="form-field">
+          <label for="uld-input">ULD:</label>
+          <input type="number" id="uld-input" value="0.42" min="0" max="1" step="0.001">
+        </div>
+
+        <div class="form-field">
+          <label for="channel-count-input">Ch:</label>
+          <input type="number" id="channel-count-input" value="750" min="1" step="1">
+        </div>
       </div>
     </div>
 
@@ -304,14 +308,20 @@
       const stopButton = document.querySelector('button#stop');
       const resetButton = document.querySelector('button#reset');
       const exportButton = document.querySelector('button#export');
-      const noiseInput = document.querySelector('input#noise-input');
-      const channelCountSelect = document.querySelector('select#channel-count');
+      const lldInput = document.querySelector('input#lld-input');
+      const uldInput = document.querySelector('input#uld-input');
+      const channelCountInput = document.querySelector('input#channel-count-input');
 
       startButton.addEventListener('click', () => startProcessing());
       stopButton.addEventListener('click', () => stopProcessing());
       resetButton.addEventListener('click', () => resetHistogram());
       exportButton.addEventListener('click', () => exportData());
-      channelCountSelect.addEventListener('change', () => handleChannelCountChange());
+      channelCountInput.addEventListener('blur', () => handleChannelCountChange());
+      channelCountInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          channelCountInput.blur();
+        }
+      });
 
       window.AudioContext = window.AudioContext || window.webkitAudioContext;
       let audioContext = undefined;
@@ -320,7 +330,7 @@
       const maxFrontPointsDefault = 12;
 
       // histogram
-      let histogram = new Array(parseInt(channelCountSelect.value)).fill(0);
+      let histogram = new Array(parseInt(channelCountInput.value)).fill(0);
       let totalTime = 0;
       let totalCounts = 0;
       let yScale = 'sqrt';
@@ -344,7 +354,7 @@
         if (!force && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
           return;
         }
-        const channels = parseInt(channelCountSelect.value);
+        const channels = parseInt(channelCountInput.value);
         histogram = new Array(channels).fill(0);
         totalTime = 0;
         totalCounts = 0;
@@ -352,15 +362,11 @@
       }
 
       function handleChannelCountChange() {
-        if (totalCounts > 0 && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
-          channelCountSelect.value = histogram.length;
+        const newChannels = parseInt(channelCountInput.value);
+        if (totalCounts > 0 && newChannels !== histogram.length && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
+          channelCountInput.value = histogram.length;
           return;
         }
-        const oldChannels = histogram.length;
-        const newChannels = parseInt(channelCountSelect.value);
-        const currentNoise = parseInt(noiseInput.value);
-        const newNoise = Math.round(currentNoise * newChannels / oldChannels);
-        noiseInput.value = newNoise;
         resetHistogram(true);
       }
 
@@ -398,7 +404,9 @@
         startButton.disabled = isRecording;
         resetButton.disabled = isRecording;
         exportButton.disabled = isRecording;
-        channelCountSelect.disabled = isRecording;
+        lldInput.disabled = isRecording;
+        uldInput.disabled = isRecording;
+        channelCountInput.disabled = isRecording;
         stopButton.disabled = !isRecording;
       }
 
@@ -412,7 +420,7 @@
         oscilloscope.width = oscilloscopeWrapper.clientWidth;
         oscilloscope.height = oscilloscopeWrapper.clientHeight;
 
-        histogram.width = parseInt(channelCountSelect.value);
+        histogram.width = parseInt(channelCountInput.value);
         histogram.height = histogramWrapper.clientHeight;
       }
 
@@ -534,13 +542,17 @@
             prevValue = currentValue;
           }
 
-          const noise = parseInt(noiseInput.value);
+          const lld = parseFloat(lldInput.value);
+          const uld = parseFloat(uldInput.value);
           for (pulse of pulses) {
-            const bin = Math.floor(Math.min(pulse, 1) / 1 * (histogram.length - 1));
-            if (bin > noise) {
-              histogram[bin]++;
-              totalCounts++;
+            if (pulse < lld) {
+              continue;
             }
+
+            const ratio = Math.min(pulse / uld, 1);
+            const bin = Math.floor(ratio * (histogram.length - 1));
+            histogram[bin]++;
+            totalCounts++;
           }
         }
       }
@@ -598,12 +610,12 @@
         ctx.beginPath();
 
         for (let channel = 0; channel < width; channel++) {
-          if (channel % 100 === 0) {
-            // Major tick every 100 channels
+          if (channel % 50 === 0) {
+            // Major tick
             ctx.moveTo(channel - 0.5, height);
             ctx.lineTo(channel - 0.5, height - 6);
-          } else if (channel % 50 === 0) {
-            // Minor tick every 50 channels
+          } else if (channel % 25 === 0) {
+            // Minor tick
             ctx.moveTo(channel - 0.5, height);
             ctx.lineTo(channel - 0.5, height - 3);
           }
@@ -616,7 +628,7 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
-        for (let channel = 0; channel < width; channel += 100) {
+        for (let channel = 0; channel < width; channel += 50) {
           ctx.fillText(channel.toString(), channel, height - 16);
         }
 
