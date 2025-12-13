@@ -312,10 +312,34 @@
       const uldInput = document.querySelector('input#uld-input');
       const channelCountInput = document.querySelector('input#channel-count-input');
 
+      // Load saved values from localStorage
+      function loadSettings() {
+        const savedLld = localStorage.getItem('mca_lld');
+        const savedUld = localStorage.getItem('mca_uld');
+        const savedChannels = localStorage.getItem('mca_channels');
+
+        if (savedLld !== null) lldInput.value = savedLld;
+        if (savedUld !== null) uldInput.value = savedUld;
+        if (savedChannels !== null) channelCountInput.value = savedChannels;
+      }
+
+      // Save settings to localStorage
+      function saveSettings() {
+        localStorage.setItem('mca_lld', lldInput.value);
+        localStorage.setItem('mca_uld', uldInput.value);
+        localStorage.setItem('mca_channels', channelCountInput.value);
+      }
+
+      loadSettings();
+
       startButton.addEventListener('click', () => startProcessing());
       stopButton.addEventListener('click', () => stopProcessing());
       resetButton.addEventListener('click', () => resetHistogram());
       exportButton.addEventListener('click', () => exportData());
+
+      lldInput.addEventListener('change', () => saveSettings());
+      uldInput.addEventListener('change', () => saveSettings());
+
       channelCountInput.addEventListener('blur', () => handleChannelCountChange());
       channelCountInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -367,6 +391,7 @@
           channelCountInput.value = histogram.length;
           return;
         }
+        saveSettings();
         resetHistogram(true);
       }
 
