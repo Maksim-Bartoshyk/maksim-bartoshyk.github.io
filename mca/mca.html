@@ -303,6 +303,7 @@
   <script>
     // start/stop processing
     (async function () {
+      // ui controls
       const audioInputSelect = document.querySelector('select#audio-source');
       const startButton = document.querySelector('button#start');
       const stopButton = document.querySelector('button#stop');
@@ -312,7 +313,53 @@
       const uldInput = document.querySelector('input#uld-input');
       const channelCountInput = document.querySelector('input#channel-count-input');
 
-      // Load saved values from localStorage
+      // globals
+      const minFrontPointsDefault = 4;
+      const maxFrontPointsDefault = 12;
+      window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      let audioContext = undefined;
+      let wakeLock = undefined;
+      let histogram = new Array(parseInt(channelCountInput.value)).fill(0);
+      let histogramLatestChangesHistory = [];
+      let totalTime = 0;
+      let totalCounts = 0;
+      let yScale = 'sqrt';
+
+      // ui actions
+      startButton.addEventListener('click', () => startProcessing());
+      stopButton.addEventListener('click', () => stopProcessing());
+      resetButton.addEventListener('click', () => resetHistogram());
+      exportButton.addEventListener('click', () => exportData());
+      lldInput.addEventListener('change', () => saveSettings());
+      uldInput.addEventListener('change', () => saveSettings());
+      channelCountInput.addEventListener('blur', () => handleChannelCountChange());
+      channelCountInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          channelCountInput.blur();
+        }
+      });
+      document.querySelector('.stats').addEventListener('click', () => {
+        toggleYScale();
+      });
+      document.addEventListener('touchstart', async () => {
+        await reacquireWakeLock();
+      });
+      // Use pagehide instead of beforeunload for better iOS compatibility
+      window.addEventListener('pagehide', () => {
+        saveHistogramData();
+      });
+      // Also save on visibility change (works better on mobile when switching apps)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          saveHistogramData();
+        }
+      });
+      window.addEventListener('resize', () => {
+        resizeCanvases();
+        drawHistogram();
+      });
+
+      // local storage
       function loadSettings() {
         const savedLld = localStorage.getItem('mca_lld');
         const savedUld = localStorage.getItem('mca_uld');
@@ -323,47 +370,69 @@
         if (savedChannels !== null) channelCountInput.value = savedChannels;
       }
 
-      // Save settings to localStorage
       function saveSettings() {
         localStorage.setItem('mca_lld', lldInput.value);
         localStorage.setItem('mca_uld', uldInput.value);
         localStorage.setItem('mca_channels', channelCountInput.value);
       }
 
-      loadSettings();
-
-      startButton.addEventListener('click', () => startProcessing());
-      stopButton.addEventListener('click', () => stopProcessing());
-      resetButton.addEventListener('click', () => resetHistogram());
-      exportButton.addEventListener('click', () => exportData());
-
-      lldInput.addEventListener('change', () => saveSettings());
-      uldInput.addEventListener('change', () => saveSettings());
-
-      channelCountInput.addEventListener('blur', () => handleChannelCountChange());
-      channelCountInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          channelCountInput.blur();
+      function saveHistogramData() {
+        if (totalTime > 0) {
+          const data = {
+            histogram: histogram,
+            totalTime: totalTime,
+            totalCounts: totalCounts
+          };
+          localStorage.setItem('mca_histogram_data', JSON.stringify(data));
         }
-      });
+      }
 
-      window.AudioContext = window.AudioContext || window.webkitAudioContext;
-      let audioContext = undefined;
-      let wakeLock = undefined;
-      const minFrontPointsDefault = 4;
-      const maxFrontPointsDefault = 12;
+      function loadHistogramData() {
+        const savedData = localStorage.getItem('mca_histogram_data');
+        if (savedData) {
+          try {
+            const data = JSON.parse(savedData);
+            if (data.histogram && Array.isArray(data.histogram) && data.histogram.length > 0) {
+              channelCountInput.value = data.histogram.length;
+              histogram = data.histogram;
+              totalTime = data.totalTime || 0;
+              totalCounts = data.totalCounts || 0;
+            }
+          } catch (e) {
+            addDebug(`Error loading histogram data from local storage: ${e}`);
+            localStorage.removeItem('mca_histogram_data');
+          }
+        }
+      }
 
-      // histogram
-      let histogram = new Array(parseInt(channelCountInput.value)).fill(0);
-      let histogramLatestChangesHistory = [];
-      let totalTime = 0;
-      let totalCounts = 0;
-      let yScale = 'sqrt';
+      function clearHistogramData() {
+        localStorage.removeItem('mca_histogram_data');
+      }
 
-      document.querySelector('.stats').addEventListener('click', () => {
-        toggleYScale();
-      });
+      // screen wake lock
+      async function acquireWakeLock() {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {
+          // The request failed, likely due to a system setting (e.g., low battery)
+          addDebug(`Error acquiring wake lock: ${err}`);
+        }
+      }
 
+      async function reacquireWakeLock() {
+        if (wakeLock === undefined) {
+          return;
+        }
+
+        try {
+          await wakeLock.release();
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {
+          addDebug(`Error reacquiring wake lock: ${err}`);
+        }
+      }
+
+      // toggle y scale
       function toggleYScale() {
         if (yScale === 'sqrt') {
           yScale = 'log';
@@ -375,6 +444,7 @@
         drawHistogram();
       }
 
+      // reset histogram
       function resetHistogram(force) {
         if (!force && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
           return;
@@ -384,9 +454,11 @@
         histogramLatestChangesHistory = [];
         totalTime = 0;
         totalCounts = 0;
+        clearHistogramData();
         drawHistogram();
       }
 
+      // handle channel count change
       function handleChannelCountChange() {
         const newChannels = parseInt(channelCountInput.value);
         if (totalCounts > 0 && newChannels !== histogram.length && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
@@ -397,6 +469,7 @@
         resetHistogram(true);
       }
 
+      // export data to csv
       function exportData() {
         const utcDatetime = new Date().toISOString().split('.')[0].replace(/[:]/g, '-') + 'Z';
         const defaultFilename = `mca-data-${utcDatetime}`;
@@ -426,6 +499,7 @@
         addDebug('Data exported');
       }
 
+      // enable/disable controls
       function setControlsEnabled(isRecording) {
         audioInputSelect.disabled = isRecording;
         startButton.disabled = isRecording;
@@ -437,7 +511,7 @@
         stopButton.disabled = !isRecording;
       }
 
-      // Canvas sizing
+      // canvas sizing
       function resizeCanvases() {
         const oscilloscope = document.getElementById('oscilloscope');
         const histogram = document.getElementById('histogram');
@@ -451,13 +525,7 @@
         histogram.height = histogramWrapper.clientHeight;
       }
 
-      window.addEventListener('resize', () => {
-        resizeCanvases();
-        drawHistogram();
-      });
-      resizeCanvases();
-      drawHistogram();
-
+      // start/stop audio capturing
       async function startProcessing() {
         if (audioContext) {
           addDebug(`ERROR: Start click while audio context is present`);
@@ -502,26 +570,8 @@
             setControlsEnabled(false);
           });
 
-        try {
-          wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {
-          // The request failed, likely due to a system setting (e.g., low battery)
-          addDebug(`Error acquiring wake lock: ${err}`);
-        }
+        await acquireWakeLock();
       }
-
-      document.addEventListener('touchstart', async () => {
-        if (wakeLock === undefined) {
-          return;
-        }
-
-        try {
-          await wakeLock.release();
-          wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {
-          addDebug(`Error reacquiring wake lock: ${err}`);
-        }
-      });
 
       async function stopProcessing() {
         if (!audioContext) {
@@ -542,7 +592,7 @@
         drawHistogram();
       }
 
-      // pulse processor
+      // audio (pulse) processing
       let currentFrontPoints = 0;
       let prevValue = 0;
       let frontStartValue = 0;
@@ -593,6 +643,7 @@
         }
       }
 
+      // rendering of data
       function drawOscilloscope(inputBuffer) {
         const canvas = document.getElementById('oscilloscope');
         const ctx = canvas.getContext('2d');
@@ -753,6 +804,12 @@
         }
         document.querySelector('.stats-text').innerText = `Time: ${totalTime.toFixed(1)} s | Counts: ${totalCounts} | CPS: ${cps}`;
       }
+
+      // startup
+      loadSettings();
+      loadHistogramData();
+      resizeCanvases();
+      drawHistogram();
     }());
   </script>
 </body>
