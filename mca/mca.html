@@ -355,6 +355,7 @@
 
       // histogram
       let histogram = new Array(parseInt(channelCountInput.value)).fill(0);
+      let histogramLatestChangesHistory = [];
       let totalTime = 0;
       let totalCounts = 0;
       let yScale = 'sqrt';
@@ -380,6 +381,7 @@
         }
         const channels = parseInt(channelCountInput.value);
         histogram = new Array(channels).fill(0);
+        histogramLatestChangesHistory = [];
         totalTime = 0;
         totalCounts = 0;
         drawHistogram();
@@ -535,6 +537,9 @@
           await wakeLock.release();
           wakeLock = undefined;
         }
+
+        histogramLatestChangesHistory = [];
+        drawHistogram();
       }
 
       // pulse processor
@@ -569,6 +574,7 @@
 
           const lld = parseFloat(lldInput.value);
           const uld = parseFloat(uldInput.value);
+          const histogramLatestChanges = {};
           for (pulse of pulses) {
             if (pulse < lld) {
               continue;
@@ -578,6 +584,11 @@
             const bin = Math.floor(ratio * (histogram.length - 1));
             histogram[bin]++;
             totalCounts++;
+            histogramLatestChanges[bin] = true;
+          }
+          histogramLatestChangesHistory.push(histogramLatestChanges);
+          if (histogramLatestChangesHistory.length > 10) {
+            histogramLatestChangesHistory.shift();
           }
         }
       }
@@ -660,6 +671,19 @@
         ctx.fillText(yScale, 16, 8);
       }
 
+      function calculateBinHeight(bin, maxValue, height) {
+        let binHeight = maxValue > 0 ? (Math.sqrt(bin) / Math.sqrt(maxValue) * height) : 0;
+        if (yScale === 'lin') {
+          binHeight = maxValue > 0 ? (bin / maxValue * height) : 0;
+        }
+        if (yScale === 'log') {
+          binHeight = maxValue > 1 ? (Math.log10(bin + 1) / Math.log10(maxValue + 1) * height) : 0;
+        }
+
+        return binHeight;
+      }
+
+
       function drawHistogram() {
         const canvas = document.getElementById('histogram');
         const ctx = canvas.getContext('2d');
@@ -669,11 +693,11 @@
 
         if (height === 0) return;
 
-        ctx.fillStyle = 'black';
+        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
         ctx.fillRect(0, 0, width, height);
 
         ctx.lineWidth = 1;
-        ctx.strokeStyle = 'white';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
         ctx.beginPath();
 
         let maxValue = 0;
@@ -693,19 +717,27 @@
 
         for (var x = 0; x < histogram.length; x++) {
           const bin = histogram[x];
-          let binHeight = maxValue > 0 ? (Math.sqrt(bin) / Math.sqrt(maxValue) * height) : 0;
-          if (yScale === 'lin') {
-            binHeight = maxValue > 0 ? (bin / maxValue * height) : 0;
-          }
-          if (yScale === 'log') {
-            binHeight = maxValue > 1 ? (Math.log10(bin + 1) / Math.log10(maxValue + 1) * height) : 0;
-          }
+          const binHeight = calculateBinHeight(bin, maxValue, height);
 
           ctx.moveTo(x - 0.5, height);
           ctx.lineTo(x - 0.5, height - binHeight);
         }
 
         ctx.stroke();
+
+        // Highlight latest changes
+        for (let i = 0; i < histogramLatestChangesHistory.length; i++) {
+          const alpha = (i + 1) / histogramLatestChangesHistory.length;
+          ctx.strokeStyle = `rgba(255, 0, 0, ${alpha})`;
+          ctx.beginPath();
+          const histogramLatestChanges = histogramLatestChangesHistory[i];
+          for (const binIndex in histogramLatestChanges) {
+            const binHeight = calculateBinHeight(histogram[binIndex], maxValue, height);
+            ctx.moveTo(binIndex - 0.5, height);
+            ctx.lineTo(binIndex - 0.5, height - binHeight);
+          }
+          ctx.stroke();
+        }
 
         drawChannelTicks(ctx, width, height);
 
