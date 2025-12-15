@@ -476,16 +476,14 @@
         const filename = prompt('Enter filename for export:', defaultFilename);
 
         if (filename === null) {
-          addDebug('Export cancelled.');
           return;
         }
 
         if (!filename) {
-          addDebug('Export failed: filename cannot be empty.');
           return;
         }
 
-        let csvContent = `Channel,Counts (per ${totalTime.toFixed(1)} s)\n`;
+        let csvContent = `Channel,Counts (TotalTime=${totalTime.toFixed(1)}s)\n`;
         for (let i = 0; i < histogram.length; i++) {
           csvContent += `${i},${histogram[i]}\n`;
         }
@@ -496,7 +494,6 @@
         a.download = `${filename}.csv`;
         a.click();
         URL.revokeObjectURL(url);
-        addDebug('Data exported');
       }
 
       // enable/disable controls
