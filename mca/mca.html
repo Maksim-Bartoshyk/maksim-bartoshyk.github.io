@@ -608,6 +608,11 @@
             };
             microphone.connect(scriptProcessor);
             scriptProcessor.connect(audioContext.destination);
+
+            stream.getAudioTracks()[0].addEventListener('ended', () => {
+              addDebug(`INFO: Audio input stream ended`);
+              stopProcessing();
+            });
           })
           .catch(e => {
             addDebug(`ERROR: Unable to start media - ${e}`);
