@@ -561,6 +561,9 @@
               processAudioData(inputBuffer);
               drawOscilloscope(inputBuffer);
               drawHistogram();
+              if (Math.floor(totalTime) % 10 === 0) {
+                saveHistogramData();
+              }
             };
             microphone.connect(scriptProcessor);
             scriptProcessor.connect(audioContext.destination);
