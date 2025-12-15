@@ -1,6 +1,6 @@
 // MCA PWA Service Worker
-// Version format: YYYYMMDD.n (increment n for same-day releases)
-const CACHE_VERSION = '20251215.18';
+// Version format: vYYYYMMDD.n (increment n for same-day releases)
+const CACHE_VERSION = 'v20251216.0';
 const CACHE_NAME = `mca-cache-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [
@@ -34,15 +34,37 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: cache-first strategy
+// Fetch: cache-first strategy with version injection for HTML
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(event.request);
-      })
-  );
+  const url = new URL(event.request.url);
+  const isHtmlRequest = url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+
+  if (isHtmlRequest) {
+    // For HTML files, inject the cache version
+    event.respondWith(
+      caches.match(event.request)
+        .then((cachedResponse) => cachedResponse || fetch(event.request))
+        .then((response) => {
+          return response.text().then((html) => {
+            const modifiedHtml = html.replace(/\{\{CACHE_VERSION_PLACEHOLDER\}\}/g, CACHE_VERSION);
+            return new Response(modifiedHtml, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: response.headers
+            });
+          });
+        })
+    );
+  } else {
+    // For non-HTML files, use standard cache-first strategy
+    event.respondWith(
+      caches.match(event.request)
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          return fetch(event.request);
+        })
+    );
+  }
 });

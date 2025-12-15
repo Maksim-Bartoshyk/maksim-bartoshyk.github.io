@@ -354,7 +354,9 @@
       const MAX_FRONT_POINTS = 12;
       const INPUT_BUFFER_SIZE = 4096;
       const SAMPLE_RATE = 44100;
+      const CACHE_VERSION = '{{CACHE_VERSION_PLACEHOLDER}}';
       window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      let isMinimized = false;
       let audioContext = undefined;
       let wakeLock = undefined;
       let histogram = new Array(parseInt(channelCountInput.value)).fill(0);
@@ -387,12 +389,20 @@
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
           saveHistogramData();
+          isMinimized = true;
         }
 
         if (document.visibilityState === 'visible') {
           if (audioContext) {
             acquireWakeLock();
           }
+
+          if (isMinimized && window.matchMedia('(display-mode: standalone)').matches) {
+            // to avoid issues with audio context resuming when running as pwa from home screen on ios
+            window.location.reload();
+          }
+
+          isMinimized = false;
         }
       });
       window.addEventListener('resize', () => {
@@ -458,6 +468,7 @@
         }
       }
 
+      // prevent screen from sleeping
       async function acquireWakeLock() {
         if (wakeLock !== undefined) {
           return;
@@ -598,7 +609,6 @@
             const scriptProcessor = audioContext.createScriptProcessor(INPUT_BUFFER_SIZE, 1, 1);
             scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
               const inputBuffer = audioProcessingEvent.inputBuffer;
-              totalTime += inputBuffer.duration;
               processAudioData(inputBuffer);
               drawOscilloscope(inputBuffer);
               drawHistogram();
@@ -650,7 +660,12 @@
         const maxFrontPoints = MAX_FRONT_POINTS * inputBuffer.sampleRate / SAMPLE_RATE;
         if (inputChannelData) {
           const pulses = [];
+          let allZeros = true;
           for (i = 0; i < inputChannelData.length; i++) {
+            if (inputChannelData[i] !== 0) {
+              allZeros = false;
+            }
+
             const currentValue = inputChannelData[i] + 1; // from 0 to 2
             if (currentValue > prevValue) {
               if (currentFrontPoints === 0) {
@@ -670,6 +685,14 @@
             prevValue = currentValue;
           }
 
+          if (allZeros) {
+            // likely no input signal, skip processing
+            // happens a lot on iOS when PWA is in background
+            histogramLatestChangesHistory.shift();
+            return;
+          }
+
+          totalTime += inputBuffer.duration;
           const lld = parseFloat(lldInput.value);
           const uld = parseFloat(uldInput.value);
           const histogramLatestChanges = {};
@@ -772,7 +795,9 @@
           ctx.fillText(channel.toString(), channel, height - 16);
         }
 
-        ctx.fillText(yScale, 16, 8);
+        ctx.textAlign = 'left';
+        const scaleAndVersionText = `${yScale} | ${CACHE_VERSION}`;
+        ctx.fillText(scaleAndVersionText, 8, 8);
       }
 
       function calculateBinHeight(bin, maxValue, height) {
@@ -800,22 +825,34 @@
         return cps;
       }
 
+      function drawStats(totalRecentCounts, totalRecentDuration) {
+        let averageCps = totalTime > 0 ? (totalCounts / totalTime) : 0;
+        averageCps = formatCps(averageCps);
+        let recentCps = totalRecentDuration > 0 ? (totalRecentCounts / totalRecentDuration) : 0;
+        recentCps = Math.round(recentCps);
+        let statsText = '';
+        if (window.matchMedia("(orientation: portrait)").matches) {
+          statsText = `time: ${totalTime.toFixed(1)} s | counts: ${totalCounts} | ~cps: ${averageCps}\ncp1s: ${recentCps}`;
+        } else {
+          statsText = `time: ${totalTime.toFixed(1)} s | counts: ${totalCounts} | ~cps: ${averageCps} | cp1s: ${recentCps}`;
+        }
+        document.querySelector('.stats-text').innerText = statsText;
+      }
+
       function drawHistogram() {
         const canvas = document.getElementById('histogram');
         const ctx = canvas.getContext('2d');
-        canvas.width = histogram.length;
-        const width = canvas.width;
+        const width = histogram.length;
         const height = canvas.height;
 
         if (height === 0) return;
 
+        // cleanup
+        canvas.width = width;
         ctx.fillStyle = 'rgba(0, 0, 0, 1)';
         ctx.fillRect(0, 0, width, height);
 
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
-        ctx.beginPath();
-
+        // constraints
         let maxValue = 0;
         for (const bin of histogram) {
           if (bin > maxValue) {
@@ -831,6 +868,10 @@
           maxValue *= overheadFactor;
         }
 
+        // all counts
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+        ctx.beginPath();
         for (var x = 0; x < histogram.length; x++) {
           const bin = histogram[x];
           const binHeight = calculateBinHeight(bin, maxValue, height);
@@ -838,10 +879,9 @@
           ctx.moveTo(x - 0.5, height);
           ctx.lineTo(x - 0.5, height - binHeight);
         }
-
         ctx.stroke();
 
-        // Highlight latest changes
+        // recent counts
         let totalRecentCounts = 0;
         let totalRecentDuration = 0;
         for (let i = 0; i < histogramLatestChangesHistory.length; i++) {
@@ -863,18 +903,7 @@
         }
 
         drawChannelTicks(ctx, width, height);
-
-        let averageCps = totalTime > 0 ? (totalCounts / totalTime) : 0;
-        averageCps = formatCps(averageCps);
-        let recentCps = totalRecentDuration > 0 ? (totalRecentCounts / totalRecentDuration) : 0;
-        recentCps = Math.round(recentCps);
-        let statsText = '';
-        if (window.matchMedia("(orientation: portrait)").matches) {
-          statsText = `time: ${totalTime.toFixed(1)} s | counts: ${totalCounts} | ~cps: ${averageCps}\ncp1s: ${recentCps}`;
-        } else {
-          statsText = `time: ${totalTime.toFixed(1)} s | counts: ${totalCounts} | ~cps: ${averageCps} | cp1s: ${recentCps}`;
-        }
-        document.querySelector('.stats-text').innerText = statsText;
+        drawStats(totalRecentCounts, totalRecentDuration);
       }
 
       // startup
