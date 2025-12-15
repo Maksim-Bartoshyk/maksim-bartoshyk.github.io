@@ -112,6 +112,8 @@
       text-align: center;
       background: #1a1a1a;
       border-radius: 4px;
+      font-family: monospace;
+      font-variant-numeric: tabular-nums;
     }
 
     .input-row {
@@ -329,8 +331,10 @@
       const channelCountInput = document.querySelector('input#channel-count-input');
 
       // globals
-      const minFrontPointsDefault = 4;
-      const maxFrontPointsDefault = 12;
+      const MIN_FRONT_POINTS = 4;
+      const MAX_FRONT_POINTS = 12;
+      const INPUT_BUFFER_SIZE = 4096;
+      const SAMPLE_RATE = 44100;
       window.AudioContext = window.AudioContext || window.webkitAudioContext;
       let audioContext = undefined;
       let wakeLock = undefined;
@@ -559,14 +563,14 @@
             echoCancellation: false,
             autoGainControl: false,
             noiseSuppression: false,
-            sampleRate: 44100
+            sampleRate: SAMPLE_RATE
           },
           video: false
         };
         navigator.mediaDevices.getUserMedia(constraints)
           .then(stream => {
             const microphone = audioContext.createMediaStreamSource(stream);
-            const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+            const scriptProcessor = audioContext.createScriptProcessor(INPUT_BUFFER_SIZE, 1, 1);
             scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
               const inputBuffer = audioProcessingEvent.inputBuffer;
               totalTime += inputBuffer.duration;
@@ -613,8 +617,8 @@
       let frontStartValue = 0;
       function processAudioData(inputBuffer) {
         const inputChannelData = inputBuffer.getChannelData(0);
-        const minFrontPoints = minFrontPointsDefault * inputBuffer.sampleRate / 44100;
-        const maxFrontPoints = maxFrontPointsDefault * inputBuffer.sampleRate / 44100;
+        const minFrontPoints = MIN_FRONT_POINTS * inputBuffer.sampleRate / SAMPLE_RATE;
+        const maxFrontPoints = MAX_FRONT_POINTS * inputBuffer.sampleRate / SAMPLE_RATE;
         if (inputChannelData) {
           const pulses = [];
           for (i = 0; i < inputChannelData.length; i++) {
@@ -649,10 +653,15 @@
             const bin = Math.floor(ratio * (histogram.length - 1));
             histogram[bin]++;
             totalCounts++;
-            histogramLatestChanges[bin] = true;
+            if (!histogramLatestChanges[bin]) {
+              histogramLatestChanges[bin] = 1;
+            } else {
+              histogramLatestChanges[bin]++;
+            }
           }
+          histogramLatestChanges.duration = inputBuffer.duration;
           histogramLatestChangesHistory.push(histogramLatestChanges);
-          if (histogramLatestChangesHistory.length > 10) {
+          if (histogramLatestChangesHistory.length > Math.ceil(inputBuffer.sampleRate / INPUT_BUFFER_SIZE)) {
             histogramLatestChangesHistory.shift();
           }
         }
@@ -749,6 +758,18 @@
         return binHeight;
       }
 
+      function formatCps(cps) {
+        if (cps < 10) {
+          cps = cps.toFixed(3);
+        } else if (cps < 100) {
+          cps = cps.toFixed(2);
+        } else if (cps < 1000) {
+          cps = cps.toFixed(1);
+        } else {
+          cps = Math.round(cps);
+        }
+        return cps;
+      }
 
       function drawHistogram() {
         const canvas = document.getElementById('histogram');
@@ -792,12 +813,19 @@
         ctx.stroke();
 
         // Highlight latest changes
+        let totalRecentCounts = 0;
+        let totalRecentDuration = 0;
         for (let i = 0; i < histogramLatestChangesHistory.length; i++) {
           const alpha = (i + 1) / histogramLatestChangesHistory.length;
           ctx.strokeStyle = `rgba(255, 0, 0, ${alpha})`;
           ctx.beginPath();
           const histogramLatestChanges = histogramLatestChangesHistory[i];
           for (const binIndex in histogramLatestChanges) {
+            if (binIndex === 'duration') {
+              totalRecentDuration += histogramLatestChanges[binIndex];
+              continue;
+            }
+            totalRecentCounts += histogramLatestChanges[binIndex];
             const binHeight = calculateBinHeight(histogram[binIndex], maxValue, height);
             ctx.moveTo(binIndex - 0.5, height);
             ctx.lineTo(binIndex - 0.5, height - binHeight);
@@ -807,17 +835,11 @@
 
         drawChannelTicks(ctx, width, height);
 
-        let cps = totalTime > 0 ? (totalCounts / totalTime) : 0;
-        if (cps < 10) {
-          cps = cps.toFixed(3);
-        } else if (cps < 100) {
-          cps = cps.toFixed(2);
-        } else if (cps < 1000) {
-          cps = cps.toFixed(1);
-        } else {
-          cps = Math.round(cps);
-        }
-        document.querySelector('.stats-text').innerText = `Time: ${totalTime.toFixed(1)} s | Counts: ${totalCounts} | CPS: ${cps}`;
+        let averageCps = totalTime > 0 ? (totalCounts / totalTime) : 0;
+        averageCps = formatCps(averageCps);
+        let recentCps = totalRecentDuration > 0 ? (totalRecentCounts / totalRecentDuration) : 0;
+        recentCps = Math.round(recentCps);
+        document.querySelector('.stats-text').innerText = `Time: ${totalTime.toFixed(1)} s | Counts: ${totalCounts} | ~CPS: ${averageCps} | CP1S: ${recentCps}`;
       }
 
       // startup

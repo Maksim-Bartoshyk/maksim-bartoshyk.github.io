@@ -1,6 +1,6 @@
 // MCA PWA Service Worker
 // Version format: YYYYMMDD.n (increment n for same-day releases)
-const CACHE_VERSION = '20251215.2';
+const CACHE_VERSION = '20251215.6';
 const CACHE_NAME = `mca-cache-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [
