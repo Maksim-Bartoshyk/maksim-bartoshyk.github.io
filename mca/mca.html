@@ -114,6 +114,23 @@
       border-radius: 4px;
       font-family: monospace;
       font-variant-numeric: tabular-nums;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .wakeLock-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #444;
+      flex-shrink: 0;
+    }
+
+    .wakeLock-indicator.active {
+      background: #0f0;
+      box-shadow: 0 0 4px #0f0;
     }
 
     .input-row {
@@ -244,7 +261,8 @@
     </div>
 
     <div class="stats">
-      <span class="stats-text">Time: 0.00 s | Counts: 0 | CPS: 0.00</span>
+      <span class="wakeLock-indicator" title="Wake Lock"></span>
+      <span class="stats-text">time: 0.0 s | counts: 0 | ~cps: 0.000 | cp1s: 0</span>
     </div>
   </div>
 
@@ -329,6 +347,7 @@
       const lldInput = document.querySelector('input#lld-input');
       const uldInput = document.querySelector('input#uld-input');
       const channelCountInput = document.querySelector('input#channel-count-input');
+      const wakeLockIndicator = document.querySelector('.wakeLock-indicator');
 
       // globals
       const MIN_FRONT_POINTS = 4;
@@ -360,9 +379,6 @@
       document.querySelector('.stats').addEventListener('click', () => {
         toggleYScale();
       });
-      document.addEventListener('touchstart', async () => {
-        await reacquireWakeLock();
-      });
       // Use pagehide instead of beforeunload for better iOS compatibility
       window.addEventListener('pagehide', () => {
         saveHistogramData();
@@ -371,6 +387,12 @@
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
           saveHistogramData();
+        }
+
+        if (document.visibilityState === 'visible') {
+          if (audioContext) {
+            acquireWakeLock();
+          }
         }
       });
       window.addEventListener('resize', () => {
@@ -428,26 +450,29 @@
         localStorage.removeItem('mca_histogram_data');
       }
 
-      // screen wake lock
-      async function acquireWakeLock() {
-        try {
-          wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {
-          // The request failed, likely due to a system setting (e.g., low battery)
-          addDebug(`Error acquiring wake lock: ${err}`);
+      function updateWakeLockIndicator() {
+        if (wakeLock) {
+          wakeLockIndicator.classList.add('active');
+        } else {
+          wakeLockIndicator.classList.remove('active');
         }
       }
 
-      async function reacquireWakeLock() {
-        if (wakeLock === undefined) {
+      async function acquireWakeLock() {
+        if (wakeLock !== undefined) {
           return;
         }
 
         try {
-          await wakeLock.release();
           wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {
+            wakeLock = undefined;
+            updateWakeLockIndicator();
+          });
+          updateWakeLockIndicator();
         } catch (err) {
-          addDebug(`Error reacquiring wake lock: ${err}`);
+          // The request failed, likely due to a system setting (e.g., low battery)
+          addDebug(`Error acquiring wake lock: ${err}`);
         }
       }
 
@@ -604,7 +629,6 @@
 
         if (wakeLock) {
           await wakeLock.release();
-          wakeLock = undefined;
         }
 
         histogramLatestChangesHistory = [];
@@ -839,7 +863,13 @@
         averageCps = formatCps(averageCps);
         let recentCps = totalRecentDuration > 0 ? (totalRecentCounts / totalRecentDuration) : 0;
         recentCps = Math.round(recentCps);
-        document.querySelector('.stats-text').innerText = `Time: ${totalTime.toFixed(1)} s | Counts: ${totalCounts} | ~CPS: ${averageCps} | CP1S: ${recentCps}`;
+        let statsText = '';
+        if (window.matchMedia("(orientation: portrait)").matches) {
+          statsText = `time: ${totalTime.toFixed(1)} s | counts: ${totalCounts} | ~cps: ${averageCps}\ncp1s: ${recentCps}`;
+        } else {
+          statsText = `time: ${totalTime.toFixed(1)} s | counts: ${totalCounts} | ~cps: ${averageCps} | cp1s: ${recentCps}`;
+        }
+        document.querySelector('.stats-text').innerText = statsText;
       }
 
       // startup
