@@ -386,6 +386,7 @@
       let yScale = 'sqrt';
       let calibrationTicks = {};
       let calibration = [0, 1];
+      let cursorChannel = null;
 
       // ui actions
       startButton.addEventListener('click', () => startProcessing());
@@ -404,11 +405,14 @@
       document.querySelector('.stats').addEventListener('click', () => {
         toggleYScale();
       });
-      // Use pagehide instead of beforeunload for better iOS compatibility
-      window.addEventListener('pagehide', () => {
-        saveHistogramData();
+      document.getElementById('histogram').addEventListener('click', (e) => {
+        const canvas = e.target;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const channel = Math.round(x / rect.width * histogram.length);
+        cursorChannel = Math.max(0, Math.min(histogram.length - 1, channel));
+        drawHistogram();
       });
-      // Also save on visibility change (works better on mobile when switching apps)
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
           saveHistogramData();
@@ -479,7 +483,6 @@
         const userInput = prompt(promptMessage, currentCalibrationStr);
 
         if (userInput === null) {
-          // User clicked cancel
           return;
         }
 
@@ -1035,7 +1038,28 @@
         }
 
         drawEnergyTicks(ctx, width, height, xAxisHeight);
+        drawCursor(ctx, height, xAxisHeight);
         drawStats(totalRecentCounts, totalRecentDuration);
+      }
+
+      function drawCursor(ctx, height, xAxisHeight) {
+        if (cursorChannel === null) return;
+
+        const energy = channelToEnergy(cursorChannel);
+
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cursorChannel + 0.5, 32);
+        ctx.lineTo(cursorChannel + 0.5, height - xAxisHeight);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(0, 255, 255, 1)';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const label = `${energy.toFixed(0)}`;
+        ctx.fillText(label, cursorChannel, 20);
       }
 
       // startup
