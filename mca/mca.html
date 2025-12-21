@@ -74,9 +74,20 @@
 
     .actions {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(6, 1fr);
       gap: 8px;
       margin-bottom: 4px;
+    }
+
+    .actions button:nth-child(1),
+    .actions button:nth-child(2) {
+      grid-column: span 3;
+    }
+
+    .actions button:nth-child(3),
+    .actions button:nth-child(4),
+    .actions button:nth-child(5) {
+      grid-column: span 2;
     }
 
     button {
@@ -169,7 +180,6 @@
       padding: 10px;
       font-size: 12px;
       overflow-y: auto;
-      border-top: 1px solid #bbb;
       white-space: pre-wrap;
       word-break: break-word;
     }
@@ -220,7 +230,15 @@
       }
 
       .actions {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
+      }
+
+      .actions button:nth-child(1),
+      .actions button:nth-child(2),
+      .actions button:nth-child(3),
+      .actions button:nth-child(4),
+      .actions button:nth-child(5) {
+        grid-column: span 1;
       }
     }
   </style>
@@ -257,6 +275,7 @@
       <button id="start">Start</button>
       <button id="stop" disabled>Stop</button>
       <button id="reset">Reset</button>
+      <button id="calibration">Calibration</button>
       <button id="export">Export</button>
     </div>
 
@@ -343,6 +362,7 @@
       const startButton = document.querySelector('button#start');
       const stopButton = document.querySelector('button#stop');
       const resetButton = document.querySelector('button#reset');
+      const calibrationButton = document.querySelector('button#calibration');
       const exportButton = document.querySelector('button#export');
       const lldInput = document.querySelector('input#lld-input');
       const uldInput = document.querySelector('input#uld-input');
@@ -364,11 +384,14 @@
       let totalTime = 0;
       let totalCounts = 0;
       let yScale = 'sqrt';
+      let calibrationTicks = {};
+      let calibration = [0, 1];
 
       // ui actions
       startButton.addEventListener('click', () => startProcessing());
       stopButton.addEventListener('click', () => stopProcessing());
       resetButton.addEventListener('click', () => resetHistogram());
+      calibrationButton.addEventListener('click', () => setCalibration());
       exportButton.addEventListener('click', () => exportData());
       lldInput.addEventListener('change', () => saveSettings());
       uldInput.addEventListener('change', () => saveSettings());
@@ -411,6 +434,12 @@
       });
 
       // local storage
+      function saveSettings() {
+        localStorage.setItem('mca_lld', lldInput.value);
+        localStorage.setItem('mca_uld', uldInput.value);
+        localStorage.setItem('mca_channels', channelCountInput.value);
+      }
+
       function loadSettings() {
         const savedLld = localStorage.getItem('mca_lld');
         const savedUld = localStorage.getItem('mca_uld');
@@ -421,10 +450,65 @@
         if (savedChannels !== null) channelCountInput.value = savedChannels;
       }
 
-      function saveSettings() {
-        localStorage.setItem('mca_lld', lldInput.value);
-        localStorage.setItem('mca_uld', uldInput.value);
-        localStorage.setItem('mca_channels', channelCountInput.value);
+      function saveCalibration() {
+        localStorage.setItem('mca_calibration', JSON.stringify(calibration));
+      }
+
+      function loadCalibration() {
+        const savedCalibration = localStorage.getItem('mca_calibration');
+        if (savedCalibration != null) {
+          try {
+            const parsedCalibration = JSON.parse(savedCalibration);
+            if (Array.isArray(parsedCalibration)) {
+              calibration = parsedCalibration;
+            }
+          } catch (e) {
+            addDebug(`Error loading calibration data from local storage: ${e}`);
+            localStorage.removeItem('mca_calibration');
+          }
+        }
+      }
+
+      function setCalibration() {
+        const currentCalibrationStr = JSON.stringify(calibration);
+        const promptMessage = `Calibration is an array of coefficients [a0, a1, a2, ... an]\n` +
+          `Energy formula: energy = a0 + a1*ch + a2*ch² + ... + an*chⁿ\n\n` +
+          `Current calibration: ${currentCalibrationStr}\n\n` +
+          `Enter new calibration (as JSON array):`;
+
+        const userInput = prompt(promptMessage, currentCalibrationStr);
+
+        if (userInput === null) {
+          // User clicked cancel
+          return;
+        }
+
+        try {
+          const newCalibration = JSON.parse(userInput);
+
+          if (!Array.isArray(newCalibration)) {
+            addDebug('Invalid calibration: must be an array');
+            return;
+          }
+
+          if (newCalibration.length < 2) {
+            addDebug('Invalid calibration: at least two coefficients are required');
+            return;
+          }
+
+          if (!newCalibration.every(v => typeof v === 'number' && !isNaN(v))) {
+            addDebug('Invalid calibration: all elements must be valid numbers');
+            return;
+          }
+
+          // Valid calibration - apply it
+          calibration = newCalibration;
+          saveCalibration();
+          updateCalibrationTicks();
+          drawHistogram();
+        } catch (e) {
+          addDebug(`Invalid calibration format: ${e.message}`);
+        }
       }
 
       function saveHistogramData() {
@@ -460,6 +544,8 @@
         localStorage.removeItem('mca_histogram_data');
       }
 
+
+      // prevent screen from sleeping
       function updateWakeLockIndicator() {
         if (wakeLock) {
           wakeLockIndicator.classList.add('active');
@@ -468,7 +554,6 @@
         }
       }
 
-      // prevent screen from sleeping
       async function acquireWakeLock() {
         if (wakeLock !== undefined) {
           return;
@@ -510,6 +595,7 @@
         totalTime = 0;
         totalCounts = 0;
         clearHistogramData();
+        updateCalibrationTicks();
         drawHistogram();
       }
 
@@ -767,23 +853,68 @@
         ctx.stroke();
       }
 
-      function drawChannelTicks(ctx, width, height) {
+      function channelToEnergy(channel) {
+        let energy = 0;
+        for (let i = 0; i < calibration.length; i++) {
+          energy += calibration[i] * Math.pow(channel, i);
+        }
+
+        return energy;
+      }
+
+      function updateCalibrationTicks() {
+        calibrationTicks = {};
+        if (calibration.length < 2) {
+          calibration = [0, 1];
+        }
+
+        const energyStep = 25;
+        const energyLeftBound = channelToEnergy(0);
+        let energyTick = 0;
+        if (energyLeftBound > 0) {
+          energyTick = Math.ceil(energyLeftBound / energyStep) * energyStep;
+        }
+
+        for (let i = 0; i < histogram.length - 1; i++) {
+          const currentChEnergy = channelToEnergy(i);
+          const nextChEnergy = channelToEnergy(i + 1);
+          if (currentChEnergy <= energyTick && nextChEnergy >= energyTick) {
+            if ((energyTick - currentChEnergy) < (nextChEnergy - energyTick)) {
+              calibrationTicks[i] = energyTick;
+            } else {
+              calibrationTicks[i + 1] = energyTick;
+            }
+
+            energyTick += energyStep;
+          }
+        }
+      }
+
+      function drawEnergyTicks(ctx, width, height, xAxisHeight) {
         ctx.lineWidth = 1;
         ctx.strokeStyle = 'rgb(128, 128, 128)';
         ctx.beginPath();
+        ctx.moveTo(0, height - xAxisHeight + 0.5);
+        ctx.lineTo(width, height - xAxisHeight + 0.5);
 
+        const energyLabels = {};
         for (let channel = 0; channel < width; channel++) {
-          if (channel % 50 === 0) {
-            // Major tick
-            ctx.moveTo(channel - 0.5, height);
-            ctx.lineTo(channel - 0.5, height - 6);
-          } else if (channel % 25 === 0) {
-            // Minor tick
-            ctx.moveTo(channel - 0.5, height);
-            ctx.lineTo(channel - 0.5, height - 3);
+          if (channel in calibrationTicks) {
+            const energy = calibrationTicks[channel];
+            if (energy % 100 === 0) {
+              // Major tick
+              ctx.moveTo(channel - 0.5, height - xAxisHeight);
+              ctx.lineTo(channel - 0.5, height - xAxisHeight + 6);
+              if (energy % 200 === 0) {
+                energyLabels[channel] = energy;
+              }
+            } else if (energy % 50 === 0) {
+              // Minor tick
+              ctx.moveTo(channel - 0.5, height - xAxisHeight);
+              ctx.lineTo(channel - 0.5, height - xAxisHeight + 3);
+            }
           }
         }
-
         ctx.stroke();
 
         ctx.fillStyle = 'rgb(128, 128, 128)';
@@ -791,8 +922,8 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
-        for (let channel = 0; channel < width; channel += 50) {
-          ctx.fillText(channel.toString(), channel, height - 16);
+        for (let channel in energyLabels) {
+          ctx.fillText(energyLabels[channel].toString(), channel, height - xAxisHeight + 8);
         }
 
         ctx.textAlign = 'left';
@@ -872,12 +1003,13 @@
         ctx.lineWidth = 1;
         ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
         ctx.beginPath();
+        const xAxisHeight = 20;
         for (var x = 0; x < histogram.length; x++) {
           const bin = histogram[x];
-          const binHeight = calculateBinHeight(bin, maxValue, height);
+          const binHeight = calculateBinHeight(bin, maxValue, height - xAxisHeight);
 
-          ctx.moveTo(x - 0.5, height);
-          ctx.lineTo(x - 0.5, height - binHeight);
+          ctx.moveTo(x - 0.5, height - xAxisHeight);
+          ctx.lineTo(x - 0.5, height - xAxisHeight - binHeight);
         }
         ctx.stroke();
 
@@ -895,21 +1027,23 @@
               continue;
             }
             totalRecentCounts += histogramLatestChanges[binIndex];
-            const binHeight = calculateBinHeight(histogram[binIndex], maxValue, height);
-            ctx.moveTo(binIndex - 0.5, height);
-            ctx.lineTo(binIndex - 0.5, height - binHeight);
+            const binHeight = calculateBinHeight(histogram[binIndex], maxValue, height - xAxisHeight);
+            ctx.moveTo(binIndex - 0.5, height - xAxisHeight);
+            ctx.lineTo(binIndex - 0.5, height - xAxisHeight - binHeight);
           }
           ctx.stroke();
         }
 
-        drawChannelTicks(ctx, width, height);
+        drawEnergyTicks(ctx, width, height, xAxisHeight);
         drawStats(totalRecentCounts, totalRecentDuration);
       }
 
       // startup
       loadSettings();
       loadHistogramData();
+      loadCalibration();
       resizeCanvases();
+      updateCalibrationTicks();
       drawHistogram();
     }());
   </script>
