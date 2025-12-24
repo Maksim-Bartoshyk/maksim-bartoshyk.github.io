@@ -768,7 +768,7 @@
         if (inputChannelData) {
           const pulses = [];
           let allZeros = true;
-          for (i = 0; i < inputChannelData.length; i++) {
+          for (let i = 0; i < inputChannelData.length; i++) {
             if (inputChannelData[i] !== 0) {
               allZeros = false;
             }
@@ -803,7 +803,7 @@
           const lld = parseFloat(lldInput.value);
           const uld = parseFloat(uldInput.value);
           const histogramLatestChanges = {};
-          for (pulse of pulses) {
+          for (const pulse of pulses) {
             if (pulse < lld) {
               continue;
             }
