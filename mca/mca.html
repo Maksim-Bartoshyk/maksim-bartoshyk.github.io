@@ -1,1076 +1,1090 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE  html>
+<html  lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#000000">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="MCA">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>MCA Spectrum Analyzer</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta  charset="UTF-8">
+    <meta  name="viewport"  content="width=device-width,  initial-scale=1.0,  maximum-scale=1.0,  user-scalable=no">
+    <meta  name="theme-color"  content="#000000">
+    <meta  name="mobile-web-app-capable"  content="yes">
+    <meta  name="apple-mobile-web-app-status-bar-style"  content="black">
+    <meta  name="apple-mobile-web-app-title"  content="MCA">
+    <link  rel="manifest"  href="manifest.json">
+    <link  rel="apple-touch-icon"  href="icons/icon-192.png">
+    <title>MCA  Spectrum  Analyzer</title>
+    <style>
+        *  {
+            margin:  0;
+            padding:  0;
+            box-sizing:  border-box;
+        }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-      background: #000;
-      color: #bbb;
-      overflow-x: hidden;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+        body  {
+            font-family:  -apple-system,  BlinkMacSystemFont,  'Segoe  UI',  Arial,  sans-serif;
+            background:  #000;
+            color:  #bbb;
+            overflow-x:  hidden;
+            height:  100vh;
+            display:  flex;
+            flex-direction:  column;
+        }
 
-    .controls {
-      padding: 8px;
-      background: #111;
-      flex-shrink: 0;
-    }
+        .controls  {
+            padding:  8px;
+            background:  #111;
+            flex-shrink:  0;
+        }
 
-    .form-field {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 6px;
-    }
+        .form-field  {
+            display:  flex;
+            gap:  8px;
+            align-items:  center;
+            margin-bottom:  6px;
+        }
 
-    .form-field label {
-      font-size: 14px;
-      white-space: nowrap;
-      min-width: 38px;
-    }
+        .form-field  label  {
+            font-size:  14px;
+            white-space:  nowrap;
+            min-width:  38px;
+        }
 
-    .form-field select,
-    .form-field input {
-      flex: 1;
-      min-width: 0;
-      height: 28px;
-      padding: 2px;
-      font-size: 13px;
-      background: #222;
-      color: #bbb;
-      border: 1px solid #bbb;
-      border-radius: 4px;
-    }
+        .form-field  select,
+        .form-field  input  {
+            flex:  1;
+            min-width:  0;
+            height:  28px;
+            padding:  2px;
+            font-size:  13px;
+            background:  #222;
+            color:  #bbb;
+            border:  1px  solid  #bbb;
+            border-radius:  4px;
+        }
 
-    .settings-group {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 6px;
-    }
+        .settings-group  {
+            display:  grid;
+            grid-template-columns:  repeat(3,  1fr);
+            gap:  8px;
+            margin-bottom:  6px;
+        }
 
-    .settings-group .form-field {
-      margin-bottom: 0;
-      min-width: 0;
-    }
+        .settings-group  .form-field  {
+            margin-bottom:  0;
+            min-width:  0;
+        }
 
-    .actions {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 8px;
-      margin-bottom: 4px;
-    }
+        .actions  {
+            display:  grid;
+            grid-template-columns:  repeat(6,  1fr);
+            gap:  8px;
+            margin-bottom:  4px;
+        }
 
-    .actions button:nth-child(1),
-    .actions button:nth-child(2) {
-      grid-column: span 3;
-    }
+        .actions  button:nth-child(1),
+        .actions  button:nth-child(2)  {
+            grid-column:  span  3;
+        }
 
-    .actions button:nth-child(3),
-    .actions button:nth-child(4),
-    .actions button:nth-child(5) {
-      grid-column: span 2;
-    }
+        .actions  button:nth-child(3),
+        .actions  button:nth-child(4),
+        .actions  button:nth-child(5)  {
+            grid-column:  span  2;
+        }
 
-    button {
-      padding: 6px;
-      font-size: 14px;
-      font-weight: bold;
-      background: #bbb;
-      color: #000;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
+        button  {
+            padding:  6px;
+            font-size:  14px;
+            font-weight:  bold;
+            background:  #bbb;
+            color:  #000;
+            border:  none;
+            border-radius:  4px;
+            cursor:  pointer;
+            transition:  opacity  0.2s;
+        }
 
-    button:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
+        button:disabled  {
+            opacity:  0.3;
+            cursor:  not-allowed;
+        }
 
-    button:active:not(:disabled) {
-      opacity: 0.7;
-    }
+        button:active:not(:disabled)  {
+            opacity:  0.7;
+        }
 
-    .btn-icon {
-      flex-shrink: 0;
-      min-width: 40px;
-      font-size: 14px;
-    }
+        .btn-icon  {
+            flex-shrink:  0;
+            min-width:  40px;
+            font-size:  14px;
+        }
 
-    .stats {
-      padding: 4px;
-      font-size: 12px;
-      text-align: center;
-      background: #1a1a1a;
-      border-radius: 4px;
-      font-family: monospace;
-      font-variant-numeric: tabular-nums;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-    }
+        .stats  {
+            padding:  4px;
+            font-size:  12px;
+            text-align:  center;
+            background:  #1a1a1a;
+            border-radius:  4px;
+            font-family:  monospace;
+            font-variant-numeric:  tabular-nums;
+            display:  flex;
+            justify-content:  center;
+            align-items:  center;
+            gap:  8px;
+        }
 
-    .wakeLock-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #444;
-      flex-shrink: 0;
-    }
+        .wakeLock-indicator  {
+            width:  8px;
+            height:  8px;
+            border-radius:  50%;
+            background:  #444;
+            flex-shrink:  0;
+        }
 
-    .wakeLock-indicator.active {
-      background: #0f0;
-      box-shadow: 0 0 4px #0f0;
-    }
+        .wakeLock-indicator.active  {
+            background:  #0f0;
+            box-shadow:  0  0  4px  #0f0;
+        }
 
-    .input-row {
-      display: contents;
-    }
+        .input-row  {
+            display:  contents;
+        }
 
-    .visualization {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      min-height: 0;
-    }
+        .visualization  {
+            flex:  1;
+            display:  flex;
+            flex-direction:  column;
+            overflow:  hidden;
+            min-height:  0;
+        }
 
-    .waveform {
-      height: 20%;
-      overflow: hidden;
-    }
+        .waveform  {
+            height:  20%;
+            overflow:  hidden;
+        }
 
-    .spectrum {
-      height: 80%;
-      overflow-x: auto;
-    }
+        .spectrum  {
+            height:  80%;
+            overflow-x:  auto;
+        }
 
-    canvas {
-      display: block;
-      height: 100%;
-    }
+        canvas  {
+            display:  block;
+            height:  100%;
+        }
 
-    .waveform canvas {
-      width: 100%;
-    }
+        .waveform  canvas  {
+            width:  100%;
+        }
 
-    .console {
-      max-height: 150px;
-      padding: 10px;
-      font-size: 12px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
+        .console  {
+            max-height:  150px;
+            padding:  10px;
+            font-size:  12px;
+            overflow-y:  auto;
+            white-space:  pre-wrap;
+            word-break:  break-word;
+        }
 
-    @media (orientation: landscape) {
-      .waveform {
-        display: none;
-      }
+        @media  (orientation:  landscape)  {
+            .waveform  {
+                display:  none;
+            }
 
-      .spectrum {
-        height: 100%;
-      }
+            .spectrum  {
+                height:  100%;
+            }
 
-      .controls {
-        display: block;
-      }
+            .controls  {
+                display:  block;
+            }
 
-      .form-field,
-      .actions,
-      .settings-group {
-        margin-bottom: 0;
-      }
+            .form-field,
+            .actions,
+            .settings-group  {
+                margin-bottom:  0;
+            }
 
-      .input-row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        margin-bottom: 6px;
-      }
+            .input-row  {
+                display:  flex;
+                gap:  8px;
+                align-items:  center;
+                margin-bottom:  6px;
+            }
 
-      .input-row .form-field {
-        margin-bottom: 0;
-      }
+            .input-row  .form-field  {
+                margin-bottom:  0;
+            }
 
-      .input-row>.form-field:first-child {
-        flex: 1;
-        min-width: 0;
-      }
+            .input-row>.form-field:first-child  {
+                flex:  1;
+                min-width:  0;
+            }
 
-      .input-row .settings-group {
-        display: flex;
-        gap: 8px;
-      }
+            .input-row  .settings-group  {
+                display:  flex;
+                gap:  8px;
+            }
 
-      .input-row .settings-group .form-field {
-        min-width: 0;
-        flex: 1;
-      }
+            .input-row  .settings-group  .form-field  {
+                min-width:  0;
+                flex:  1;
+            }
 
-      .actions {
-        grid-template-columns: repeat(5, 1fr);
-      }
+            .actions  {
+                grid-template-columns:  repeat(5,  1fr);
+            }
 
-      .actions button:nth-child(1),
-      .actions button:nth-child(2),
-      .actions button:nth-child(3),
-      .actions button:nth-child(4),
-      .actions button:nth-child(5) {
-        grid-column: span 1;
-      }
-    }
-  </style>
+            .actions  button:nth-child(1),
+            .actions  button:nth-child(2),
+            .actions  button:nth-child(3),
+            .actions  button:nth-child(4),
+            .actions  button:nth-child(5)  {
+                grid-column:  span  1;
+            }
+        }
+    </style>
 </head>
 
 <body>
-  <div class="controls">
-    <div class="input-row">
-      <div class="form-field">
-        <label for="audio-source">Input:</label>
-        <select id="audio-source"></select>
-        <button id="refresh-inputs" class="btn-icon">Refresh</button>
-      </div>
+    <div  class="controls">
+        <div  class="input-row">
+            <div  class="form-field">
+                <label  for="audio-source">Input:</label>
+                <select  id="audio-source"></select>
+                <button  id="refresh-inputs"  class="btn-icon">Refresh</button>
+            </div>
 
-      <div class="settings-group">
-        <div class="form-field">
-          <label for="lld-input">LLD:</label>
-          <input type="number" id="lld-input" value="0.005" min="0" max="1" step="0.001">
+            <div  class="settings-group">
+                <div  class="form-field">
+                    <label  for="lld-input">LLD:</label>
+                    <input  type="number"  id="lld-input"  value="0.005"  min="0"  max="1"  step="0.001">
+                </div>
+
+                <div  class="form-field">
+                    <label  for="uld-input">ULD:</label>
+                    <input  type="number"  id="uld-input"  value="0.45"  min="0"  max="1"  step="0.001">
+                </div>
+
+                <div  class="form-field">
+                    <label  for="channel-count-input">Ch:</label>
+                    <input  type="number"  id="channel-count-input"  value="800"  min="1"  step="1">
+                </div>
+            </div>
         </div>
 
-        <div class="form-field">
-          <label for="uld-input">ULD:</label>
-          <input type="number" id="uld-input" value="0.45" min="0" max="1" step="0.001">
+        <div  class="actions">
+            <button  id="start">Start</button>
+            <button  id="stop"  disabled>Stop</button>
+            <button  id="reset">Reset</button>
+            <button  id="calibration">Calibration</button>
+            <button  id="export">Export</button>
         </div>
 
-        <div class="form-field">
-          <label for="channel-count-input">Ch:</label>
-          <input type="number" id="channel-count-input" value="800" min="1" step="1">
+        <div  class="stats">
+            <span  class="wakeLock-indicator"  title="Wake  Lock"></span>
+            <span  class="stats-text">time:  0.0  s  |  counts:  0  |  ~cps:  0.000  |  cp1s:  0</span>
         </div>
-      </div>
     </div>
 
-    <div class="actions">
-      <button id="start">Start</button>
-      <button id="stop" disabled>Stop</button>
-      <button id="reset">Reset</button>
-      <button id="calibration">Calibration</button>
-      <button id="export">Export</button>
+    <div  class="visualization">
+        <div  class="chart-wrapper  waveform">
+            <canvas  id="oscilloscope"></canvas>
+        </div>
+        <div  class="chart-wrapper  spectrum">
+            <canvas  id="histogram"></canvas>
+        </div>
     </div>
 
-    <div class="stats">
-      <span class="wakeLock-indicator" title="Wake Lock"></span>
-      <span class="stats-text">time: 0.0 s | counts: 0 | ~cps: 0.000 | cp1s: 0</span>
-    </div>
-  </div>
-
-  <div class="visualization">
-    <div class="chart-wrapper waveform">
-      <canvas id="oscilloscope"></canvas>
-    </div>
-    <div class="chart-wrapper spectrum">
-      <canvas id="histogram"></canvas>
-    </div>
-  </div>
-
-  <pre class="console"></pre>
-  <script>
-    // Register service worker for PWA
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./service-worker.js');
-    }
-  </script>
-  <script>
-    function addDebug(msg) {
-      document.querySelector('.console').innerText += `${msg}\n`;
-    }
-  </script>
-  <script>
-    // input device list
-    (function () {
-      const audioInputSelect = document.querySelector('select#audio-source');
-
-      function getDevices() {
-        navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(e => addDebug(`ERROR: unable to enumerate devices - ${e}`));
-      }
-
-      function gotDevices(deviceInfos) {
-        // Handles being called several times to update labels. Preserve values.
-        const currentValue = audioInputSelect.value;
-        while (audioInputSelect.firstChild) {
-          audioInputSelect.removeChild(audioInputSelect.firstChild);
+    <pre  class="console"></pre>
+    <script>
+        //  Register  service  worker  for  PWA
+        if  ('serviceWorker'  in  navigator)  {
+            navigator.serviceWorker.register('./service-worker.js');
         }
-        for (let i = 0; i !== deviceInfos.length; i++) {
-          const deviceInfo = deviceInfos[i];
-          if (deviceInfo.deviceId == '') {
-            continue;
-          }
-
-          if (deviceInfo.kind === 'audioinput') {
-            const option = document.createElement('option');
-            option.value = deviceInfo.deviceId;
-            option.text = deviceInfo.label || `microphone ${audioInputSelect.length + 1}`;
-            audioInputSelect.appendChild(option);
-          }
+    </script>
+    <script>
+        function  addDebug(msg)  {
+            document.querySelector('.console').innerText  +=  `${msg}\n`;
         }
+    </script>
+    <script>
+        //  input  device  list
+        (function  ()  {
+            const  audioInputSelect  =  document.querySelector('select#audio-source');
 
-        if (Array.prototype.slice.call(audioInputSelect.childNodes).some(n => n.value === currentValue)) {
-          audioInputSelect.value = currentValue;
-        }
-      }
-
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-          getDevices();
-        })
-        .catch(e => {
-          addDebug(`ERROR: No permission for a microphone - ${e}`)
-        });
-
-      const refreshButton = document.querySelector('button#refresh-inputs');
-      refreshButton.addEventListener('click', () => {
-        getDevices();
-      });
-    }());
-  </script>
-  <script>
-    // start/stop processing
-    (async function () {
-      // ui controls
-      const audioInputSelect = document.querySelector('select#audio-source');
-      const startButton = document.querySelector('button#start');
-      const stopButton = document.querySelector('button#stop');
-      const resetButton = document.querySelector('button#reset');
-      const calibrationButton = document.querySelector('button#calibration');
-      const exportButton = document.querySelector('button#export');
-      const lldInput = document.querySelector('input#lld-input');
-      const uldInput = document.querySelector('input#uld-input');
-      const channelCountInput = document.querySelector('input#channel-count-input');
-      const wakeLockIndicator = document.querySelector('.wakeLock-indicator');
-
-      // globals
-      const MIN_FRONT_POINTS = 4;
-      const MAX_FRONT_POINTS = 12;
-      const INPUT_BUFFER_SIZE = 4096;
-      const SAMPLE_RATE = 44100;
-      const CACHE_VERSION = '{{CACHE_VERSION_PLACEHOLDER}}';
-      window.AudioContext = window.AudioContext || window.webkitAudioContext;
-      let isMinimized = false;
-      let audioContext = undefined;
-      let wakeLock = undefined;
-      let histogram = new Array(parseInt(channelCountInput.value)).fill(0);
-      let histogramLatestChangesHistory = [];
-      let totalTime = 0;
-      let totalCounts = 0;
-      let yScale = 'sqrt';
-      let calibrationTicks = {};
-      let calibration = [0, 1];
-      let cursorChannel = null;
-
-      // ui actions
-      startButton.addEventListener('click', () => startProcessing());
-      stopButton.addEventListener('click', () => stopProcessing());
-      resetButton.addEventListener('click', () => resetHistogram());
-      calibrationButton.addEventListener('click', () => setCalibration());
-      exportButton.addEventListener('click', () => exportData());
-      lldInput.addEventListener('change', () => saveSettings());
-      uldInput.addEventListener('change', () => saveSettings());
-      channelCountInput.addEventListener('blur', () => handleChannelCountChange());
-      channelCountInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          channelCountInput.blur();
-        }
-      });
-      document.querySelector('.stats').addEventListener('click', () => {
-        toggleYScale();
-      });
-      document.getElementById('histogram').addEventListener('click', (e) => {
-        const canvas = e.target;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const channel = Math.round(x / rect.width * histogram.length);
-        cursorChannel = Math.max(0, Math.min(histogram.length - 1, channel));
-        drawHistogram();
-      });
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-          saveHistogramData();
-          isMinimized = true;
-        }
-
-        if (document.visibilityState === 'visible') {
-          if (audioContext) {
-            acquireWakeLock();
-          }
-
-          if (isMinimized && window.matchMedia('(display-mode: standalone)').matches) {
-            // to avoid issues with audio context resuming when running as pwa from home screen on ios
-            window.location.reload();
-          }
-
-          isMinimized = false;
-        }
-      });
-      window.addEventListener('resize', () => {
-        resizeCanvases();
-        drawHistogram();
-      });
-
-      // local storage
-      function saveSettings() {
-        localStorage.setItem('mca_lld', lldInput.value);
-        localStorage.setItem('mca_uld', uldInput.value);
-        localStorage.setItem('mca_channels', channelCountInput.value);
-      }
-
-      function loadSettings() {
-        const savedLld = localStorage.getItem('mca_lld');
-        const savedUld = localStorage.getItem('mca_uld');
-        const savedChannels = localStorage.getItem('mca_channels');
-
-        if (savedLld !== null) lldInput.value = savedLld;
-        if (savedUld !== null) uldInput.value = savedUld;
-        if (savedChannels !== null) channelCountInput.value = savedChannels;
-      }
-
-      function saveCalibration() {
-        localStorage.setItem('mca_calibration', JSON.stringify(calibration));
-      }
-
-      function loadCalibration() {
-        const savedCalibration = localStorage.getItem('mca_calibration');
-        if (savedCalibration != null) {
-          try {
-            const parsedCalibration = JSON.parse(savedCalibration);
-            if (Array.isArray(parsedCalibration)) {
-              calibration = parsedCalibration;
+            function  getDevices()  {
+                navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(e  =>  addDebug(`ERROR:  unable  to  enumerate  devices  -  ${e}`));
             }
-          } catch (e) {
-            addDebug(`Error loading calibration data from local storage: ${e}`);
-            localStorage.removeItem('mca_calibration');
-          }
-        }
-      }
 
-      function setCalibration() {
-        const currentCalibrationStr = JSON.stringify(calibration);
-        const promptMessage = `Calibration is an array of coefficients [a0, a1, a2, ... an]\n` +
-          `Energy formula: energy = a0 + a1*ch + a2*ch² + ... + an*chⁿ\n\n` +
-          `Current calibration: ${currentCalibrationStr}\n\n` +
-          `Enter new calibration (as JSON array):`;
+            function  gotDevices(deviceInfos)  {
+                //  Handles  being  called  several  times  to  update  labels.  Preserve  values.
+                const  currentValue  =  audioInputSelect.value;
+                while  (audioInputSelect.firstChild)  {
+                    audioInputSelect.removeChild(audioInputSelect.firstChild);
+                }
+                for  (let  i  =  0;  i  !==  deviceInfos.length;  i++)  {
+                    const  deviceInfo  =  deviceInfos[i];
+                    if  (deviceInfo.deviceId  ==  '')  {
+                        continue;
+                    }
 
-        const userInput = prompt(promptMessage, currentCalibrationStr);
+                    if  (deviceInfo.kind  ===  'audioinput')  {
+                        const  option  =  document.createElement('option');
+                        option.value  =  deviceInfo.deviceId;
+                        option.text  =  deviceInfo.label  ||  `microphone  ${audioInputSelect.length  +  1}`;
+                        audioInputSelect.appendChild(option);
+                    }
+                }
 
-        if (userInput === null) {
-          return;
-        }
-
-        try {
-          const newCalibration = JSON.parse(userInput);
-
-          if (!Array.isArray(newCalibration)) {
-            addDebug('Invalid calibration: must be an array');
-            return;
-          }
-
-          if (newCalibration.length < 2) {
-            addDebug('Invalid calibration: at least two coefficients are required');
-            return;
-          }
-
-          if (!newCalibration.every(v => typeof v === 'number' && !isNaN(v))) {
-            addDebug('Invalid calibration: all elements must be valid numbers');
-            return;
-          }
-
-          // Valid calibration - apply it
-          calibration = newCalibration;
-          saveCalibration();
-          updateCalibrationTicks();
-          drawHistogram();
-        } catch (e) {
-          addDebug(`Invalid calibration format: ${e.message}`);
-        }
-      }
-
-      function saveHistogramData() {
-        if (totalTime > 0) {
-          const data = {
-            histogram: histogram,
-            totalTime: totalTime,
-            totalCounts: totalCounts
-          };
-          localStorage.setItem('mca_histogram_data', JSON.stringify(data));
-        }
-      }
-
-      function loadHistogramData() {
-        const savedData = localStorage.getItem('mca_histogram_data');
-        if (savedData) {
-          try {
-            const data = JSON.parse(savedData);
-            if (data.histogram && Array.isArray(data.histogram) && data.histogram.length > 0) {
-              channelCountInput.value = data.histogram.length;
-              histogram = data.histogram;
-              totalTime = data.totalTime || 0;
-              totalCounts = data.totalCounts || 0;
+                if  (Array.prototype.slice.call(audioInputSelect.childNodes).some(n  =>  n.value  ===  currentValue))  {
+                    audioInputSelect.value  =  currentValue;
+                }
             }
-          } catch (e) {
-            addDebug(`Error loading histogram data from local storage: ${e}`);
-            localStorage.removeItem('mca_histogram_data');
-          }
-        }
-      }
 
-      function clearHistogramData() {
-        localStorage.removeItem('mca_histogram_data');
-      }
+            navigator.mediaDevices.getUserMedia({  audio:  true  })
+                .then(stream  =>  {
+                    getDevices();
+                })
+                .catch(e  =>  {
+                    addDebug(`ERROR:  No  permission  for  a  microphone  -  ${e}`)
+                });
 
-
-      // prevent screen from sleeping
-      function updateWakeLockIndicator() {
-        if (wakeLock) {
-          wakeLockIndicator.classList.add('active');
-        } else {
-          wakeLockIndicator.classList.remove('active');
-        }
-      }
-
-      async function acquireWakeLock() {
-        if (wakeLock !== undefined) {
-          return;
-        }
-
-        try {
-          wakeLock = await navigator.wakeLock.request('screen');
-          wakeLock.addEventListener('release', () => {
-            wakeLock = undefined;
-            updateWakeLockIndicator();
-          });
-          updateWakeLockIndicator();
-        } catch (err) {
-          // The request failed, likely due to a system setting (e.g., low battery)
-          addDebug(`Error acquiring wake lock: ${err}`);
-        }
-      }
-
-      // toggle y scale
-      function toggleYScale() {
-        if (yScale === 'sqrt') {
-          yScale = 'log';
-        } else if (yScale === 'log') {
-          yScale = 'lin';
-        } else {
-          yScale = 'sqrt';
-        }
-        drawHistogram();
-      }
-
-      // reset histogram
-      function resetHistogram(force) {
-        if (!force && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
-          return;
-        }
-        const channels = parseInt(channelCountInput.value);
-        histogram = new Array(channels).fill(0);
-        histogramLatestChangesHistory = [];
-        totalTime = 0;
-        totalCounts = 0;
-        clearHistogramData();
-        updateCalibrationTicks();
-        drawHistogram();
-      }
-
-      // handle channel count change
-      function handleChannelCountChange() {
-        const newChannels = parseInt(channelCountInput.value);
-        if (totalCounts > 0 && newChannels !== histogram.length && !confirm('Are you sure you want to reset the histogram? All collected data will be lost.')) {
-          channelCountInput.value = histogram.length;
-          return;
-        }
-        saveSettings();
-        resetHistogram(true);
-      }
-
-      // export data to csv
-      function exportData() {
-        const utcDatetime = new Date().toISOString().split('.')[0].replace(/[:]/g, '-') + 'Z';
-        const defaultFilename = `mca-data-${utcDatetime}`;
-        const filename = prompt('Enter filename for export:', defaultFilename);
-
-        if (filename === null) {
-          return;
-        }
-
-        if (!filename) {
-          return;
-        }
-
-        let csvContent = `Channel,Counts (TotalTime=${totalTime.toFixed(1)}s)\n`;
-        for (let i = 0; i < histogram.length; i++) {
-          csvContent += `${i},${histogram[i]}\n`;
-        }
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${filename}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-
-      // enable/disable controls
-      function setControlsEnabled(isRecording) {
-        audioInputSelect.disabled = isRecording;
-        startButton.disabled = isRecording;
-        resetButton.disabled = isRecording;
-        exportButton.disabled = isRecording;
-        lldInput.disabled = isRecording;
-        uldInput.disabled = isRecording;
-        channelCountInput.disabled = isRecording;
-        stopButton.disabled = !isRecording;
-      }
-
-      // canvas sizing
-      function resizeCanvases() {
-        const oscilloscope = document.getElementById('oscilloscope');
-        const histogram = document.getElementById('histogram');
-        const oscilloscopeWrapper = document.querySelector('.waveform');
-        const histogramWrapper = document.querySelector('.spectrum');
-
-        oscilloscope.width = oscilloscopeWrapper.clientWidth;
-        oscilloscope.height = oscilloscopeWrapper.clientHeight;
-
-        histogram.width = parseInt(channelCountInput.value);
-        histogram.height = histogramWrapper.clientHeight;
-      }
-
-      // start/stop audio capturing
-      async function startProcessing() {
-        if (audioContext) {
-          addDebug(`ERROR: Start click while audio context is present`);
-          return;
-        }
-
-        const audioSource = audioInputSelect.value || undefined;
-        if (!audioSource) {
-          addDebug(`ERROR: No available audio source`);
-          return;
-        }
-
-        setControlsEnabled(true);
-
-        audioContext = new AudioContext();
-        const constraints = {
-          audio: {
-            deviceId: { exact: audioSource },
-            echoCancellation: false,
-            autoGainControl: false,
-            noiseSuppression: false,
-            sampleRate: SAMPLE_RATE
-          },
-          video: false
-        };
-        navigator.mediaDevices.getUserMedia(constraints)
-          .then(stream => {
-            const microphone = audioContext.createMediaStreamSource(stream);
-            const scriptProcessor = audioContext.createScriptProcessor(INPUT_BUFFER_SIZE, 1, 1);
-            scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
-              const inputBuffer = audioProcessingEvent.inputBuffer;
-              processAudioData(inputBuffer);
-              drawOscilloscope(inputBuffer);
-              drawHistogram();
-              if (Math.floor(totalTime) % 10 === 0) {
-                saveHistogramData();
-              }
-            };
-            microphone.connect(scriptProcessor);
-            scriptProcessor.connect(audioContext.destination);
-
-            stream.getAudioTracks()[0].addEventListener('ended', () => {
-              addDebug(`INFO: Audio input stream ended`);
-              stopProcessing();
+            const  refreshButton  =  document.querySelector('button#refresh-inputs');
+            refreshButton.addEventListener('click',  ()  =>  {
+                getDevices();
             });
-          })
-          .catch(e => {
-            addDebug(`ERROR: Unable to start media - ${e}`);
-            setControlsEnabled(false);
-          });
+        }());
+    </script>
+    <script>
+        //  start/stop  processing
+        (async  function  ()  {
+            //  ui  controls
+            const  audioInputSelect  =  document.querySelector('select#audio-source');
+            const  startButton  =  document.querySelector('button#start');
+            const  stopButton  =  document.querySelector('button#stop');
+            const  resetButton  =  document.querySelector('button#reset');
+            const  calibrationButton  =  document.querySelector('button#calibration');
+            const  exportButton  =  document.querySelector('button#export');
+            const  lldInput  =  document.querySelector('input#lld-input');
+            const  uldInput  =  document.querySelector('input#uld-input');
+            const  channelCountInput  =  document.querySelector('input#channel-count-input');
+            const  wakeLockIndicator  =  document.querySelector('.wakeLock-indicator');
 
-        await acquireWakeLock();
-      }
+            //  globals
+            const  MIN_FRONT_POINTS  =  4;
+            const  MAX_FRONT_POINTS  =  12;
+            const  INPUT_BUFFER_SIZE  =  4096;
+            const  SAMPLE_RATE  =  44100;
+            const  CACHE_VERSION  =  '{{CACHE_VERSION_PLACEHOLDER}}';
+            window.AudioContext  =  window.AudioContext  ||  window.webkitAudioContext;
+            let  isMinimized  =  false;
+            let  audioContext  =  undefined;
+            let  scriptProcessor  =  undefined;
+            let  inputAudioTrack  =  undefined;
+            let  wakeLock  =  undefined;
+            let  histogram  =  new  Array(parseInt(channelCountInput.value)).fill(0);
+            let  histogramLatestChangesHistory  =  [];
+            let  totalTime  =  0;
+            let  totalCounts  =  0;
+            let  yScale  =  'sqrt';
+            let  calibrationTicks  =  {};
+            let  calibration  =  [0,  1];
+            let  cursorChannel  =  null;
 
-      async function stopProcessing() {
-        if (!audioContext) {
-          addDebug(`ERROR: No audio context while stopping`);
-          return;
-        }
+            //  ui  actions
+            startButton.addEventListener('click',  ()  =>  startProcessing());
+            stopButton.addEventListener('click',  ()  =>  stopProcessing());
+            resetButton.addEventListener('click',  ()  =>  resetHistogram());
+            calibrationButton.addEventListener('click',  ()  =>  setCalibration());
+            exportButton.addEventListener('click',  ()  =>  exportData());
+            lldInput.addEventListener('change',  ()  =>  saveSettings());
+            uldInput.addEventListener('change',  ()  =>  saveSettings());
+            channelCountInput.addEventListener('blur',  ()  =>  handleChannelCountChange());
+            channelCountInput.addEventListener('keydown',  (e)  =>  {
+                if  (e.key  ===  'Enter')  {
+                    channelCountInput.blur();
+                }
+            });
+            document.querySelector('.stats').addEventListener('click',  ()  =>  {
+                toggleYScale();
+            });
+            document.getElementById('histogram').addEventListener('click',  (e)  =>  {
+                const  canvas  =  e.target;
+                const  rect  =  canvas.getBoundingClientRect();
+                const  x  =  e.clientX  -  rect.left;
+                const  channel  =  Math.round(x  /  rect.width  *  histogram.length);
+                cursorChannel  =  Math.max(0,  Math.min(histogram.length  -  1,  channel));
+                drawHistogram();
+            });
+            document.addEventListener('visibilitychange',  ()  =>  {
+                if  (document.visibilityState  ===  'hidden')  {
+                    saveHistogramData();
+                    isMinimized  =  true;
+                }
 
-        audioContext.close();
-        audioContext = undefined;
-        setControlsEnabled(false);
+                if  (document.visibilityState  ===  'visible')  {
+                    if  (audioContext)  {
+                        acquireWakeLock();
+                    }
 
-        if (wakeLock) {
-          await wakeLock.release();
-        }
+                    if  (isMinimized  &&  window.matchMedia('(display-mode:  standalone)').matches)  {
+                        //  to  avoid  issues  with  audio  context  resuming  when  running  as  pwa  from  home  screen  on  ios
+                        window.location.reload();
+                    }
 
-        histogramLatestChangesHistory = [];
-        drawHistogram();
-      }
+                    isMinimized  =  false;
+                }
+            });
+            window.addEventListener('resize',  ()  =>  {
+                resizeCanvases();
+                drawHistogram();
+            });
 
-      // audio (pulse) processing
-      let currentFrontPoints = 0;
-      let prevValue = 0;
-      let frontStartValue = 0;
-      function processAudioData(inputBuffer) {
-        const inputChannelData = inputBuffer.getChannelData(0);
-        const minFrontPoints = MIN_FRONT_POINTS * inputBuffer.sampleRate / SAMPLE_RATE;
-        const maxFrontPoints = MAX_FRONT_POINTS * inputBuffer.sampleRate / SAMPLE_RATE;
-        if (inputChannelData) {
-          const pulses = [];
-          let allZeros = true;
-          for (i = 0; i < inputChannelData.length; i++) {
-            if (inputChannelData[i] !== 0) {
-              allZeros = false;
+            //  local  storage
+            function  saveSettings()  {
+                localStorage.setItem('mca_lld',  lldInput.value);
+                localStorage.setItem('mca_uld',  uldInput.value);
+                localStorage.setItem('mca_channels',  channelCountInput.value);
             }
 
-            const currentValue = inputChannelData[i] + 1; // from 0 to 2
-            if (currentValue > prevValue) {
-              if (currentFrontPoints === 0) {
-                frontStartValue = prevValue;
-              }
+            function  loadSettings()  {
+                const  savedLld  =  localStorage.getItem('mca_lld');
+                const  savedUld  =  localStorage.getItem('mca_uld');
+                const  savedChannels  =  localStorage.getItem('mca_channels');
 
-              currentFrontPoints++;
-            } else {
-              if (currentFrontPoints >= minFrontPoints && currentFrontPoints <= maxFrontPoints) {
-                pulses.push(prevValue - frontStartValue);
-              }
-
-              frontStartValue = 0;
-              currentFrontPoints = 0;
+                if  (savedLld  !==  null)  lldInput.value  =  savedLld;
+                if  (savedUld  !==  null)  uldInput.value  =  savedUld;
+                if  (savedChannels  !==  null)  channelCountInput.value  =  savedChannels;
             }
 
-            prevValue = currentValue;
-          }
-
-          if (allZeros) {
-            // likely no input signal, skip processing
-            // happens a lot on iOS when PWA is in background
-            histogramLatestChangesHistory.shift();
-            return;
-          }
-
-          totalTime += inputBuffer.duration;
-          const lld = parseFloat(lldInput.value);
-          const uld = parseFloat(uldInput.value);
-          const histogramLatestChanges = {};
-          for (pulse of pulses) {
-            if (pulse < lld) {
-              continue;
+            function  saveCalibration()  {
+                localStorage.setItem('mca_calibration',  JSON.stringify(calibration));
             }
 
-            const ratio = Math.min(pulse / uld, 1);
-            const bin = Math.floor(ratio * (histogram.length - 1));
-            histogram[bin]++;
-            totalCounts++;
-            if (!histogramLatestChanges[bin]) {
-              histogramLatestChanges[bin] = 1;
-            } else {
-              histogramLatestChanges[bin]++;
-            }
-          }
-          histogramLatestChanges.duration = inputBuffer.duration;
-          histogramLatestChangesHistory.push(histogramLatestChanges);
-          if (histogramLatestChangesHistory.length > Math.ceil(inputBuffer.sampleRate / INPUT_BUFFER_SIZE)) {
-            histogramLatestChangesHistory.shift();
-          }
-        }
-      }
-
-      // rendering of data
-      function drawOscilloscope(inputBuffer) {
-        const canvas = document.getElementById('oscilloscope');
-        const ctx = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
-        const xScale = 3;
-
-        if (width === 0 || height === 0) return;
-
-        const inputChannelData = inputBuffer.getChannelData(0).slice(-Math.min(width * xScale, inputBuffer.length));
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(0, 0, width, height);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'white';
-        ctx.beginPath();
-        const sliceWidth = width / inputChannelData.length;
-        let x = 0;
-        for (let i = 0; i < inputChannelData.length; i++) {
-          const isNegative = inputChannelData[i] < 0;
-          let absValue = Math.abs(inputChannelData[i]);
-          let scaledValue = Math.sqrt(absValue) / Math.sqrt(1);
-          if (yScale === 'lin') {
-            scaledValue = absValue;
-          }
-          if (yScale === 'log') {
-            scaledValue = Math.log10(absValue * 200 + 1) / Math.log10(201);
-          }
-          if (isNegative) {
-            scaledValue = -scaledValue;
-          }
-
-          const v = scaledValue + 1; // from 0 to 2
-          const y = height - v * (height / 2);
-
-          if (i === 0) {
-            ctx.moveTo(x, y - 0.5);
-          } else {
-            ctx.lineTo(x, y - 0.5);
-          }
-
-          x += sliceWidth;
-        }
-
-        ctx.stroke();
-      }
-
-      function channelToEnergy(channel) {
-        let energy = 0;
-        for (let i = 0; i < calibration.length; i++) {
-          energy += calibration[i] * Math.pow(channel, i);
-        }
-
-        return energy;
-      }
-
-      function updateCalibrationTicks() {
-        calibrationTicks = {};
-        if (calibration.length < 2) {
-          calibration = [0, 1];
-        }
-
-        const energyStep = 25;
-        const energyLeftBound = channelToEnergy(0);
-        let energyTick = 0;
-        if (energyLeftBound > 0) {
-          energyTick = Math.ceil(energyLeftBound / energyStep) * energyStep;
-        }
-
-        for (let i = 0; i < histogram.length - 1; i++) {
-          const currentChEnergy = channelToEnergy(i);
-          const nextChEnergy = channelToEnergy(i + 1);
-          if (currentChEnergy <= energyTick && nextChEnergy >= energyTick) {
-            if ((energyTick - currentChEnergy) < (nextChEnergy - energyTick)) {
-              calibrationTicks[i] = energyTick;
-            } else {
-              calibrationTicks[i + 1] = energyTick;
+            function  loadCalibration()  {
+                const  savedCalibration  =  localStorage.getItem('mca_calibration');
+                if  (savedCalibration  !=  null)  {
+                    try  {
+                        const  parsedCalibration  =  JSON.parse(savedCalibration);
+                        if  (Array.isArray(parsedCalibration))  {
+                            calibration  =  parsedCalibration;
+                        }
+                    }  catch  (e)  {
+                        addDebug(`Error  loading  calibration  data  from  local  storage:  ${e}`);
+                        localStorage.removeItem('mca_calibration');
+                    }
+                }
             }
 
-            energyTick += energyStep;
-          }
-        }
-      }
+            function  setCalibration()  {
+                const  currentCalibrationStr  =  JSON.stringify(calibration);
+                const  promptMessage  =  `Calibration  is  an  array  of  coefficients  [a0,  a1,  a2,  ...  an]\n`  +
+                    `Energy  formula:  energy  =  a0  +  a1*ch  +  a2*ch²  +  ...  +  an*chⁿ\n\n`  +
+                    `Current  calibration:  ${currentCalibrationStr}\n\n`  +
+                    `Enter  new  calibration  (as  JSON  array):`;
 
-      function drawEnergyTicks(ctx, width, height, xAxisHeight) {
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgb(128, 128, 128)';
-        ctx.beginPath();
-        ctx.moveTo(0, height - xAxisHeight + 0.5);
-        ctx.lineTo(width, height - xAxisHeight + 0.5);
+                const  userInput  =  prompt(promptMessage,  currentCalibrationStr);
 
-        const energyLabels = {};
-        for (let channel = 0; channel < width; channel++) {
-          if (channel in calibrationTicks) {
-            const energy = calibrationTicks[channel];
-            if (energy % 100 === 0) {
-              // Major tick
-              ctx.moveTo(channel - 0.5, height - xAxisHeight);
-              ctx.lineTo(channel - 0.5, height - xAxisHeight + 6);
-              if (energy % 200 === 0) {
-                energyLabels[channel] = energy;
-              }
-            } else if (energy % 50 === 0) {
-              // Minor tick
-              ctx.moveTo(channel - 0.5, height - xAxisHeight);
-              ctx.lineTo(channel - 0.5, height - xAxisHeight + 3);
+                if  (userInput  ===  null)  {
+                    return;
+                }
+
+                try  {
+                    const  newCalibration  =  JSON.parse(userInput);
+
+                    if  (!Array.isArray(newCalibration))  {
+                        addDebug('Invalid  calibration:  must  be  an  array');
+                        return;
+                    }
+
+                    if  (newCalibration.length  <  2)  {
+                        addDebug('Invalid  calibration:  at  least  two  coefficients  are  required');
+                        return;
+                    }
+
+                    if  (!newCalibration.every(v  =>  typeof  v  ===  'number'  &&  !isNaN(v)))  {
+                        addDebug('Invalid  calibration:  all  elements  must  be  valid  numbers');
+                        return;
+                    }
+
+                    //  Valid  calibration  -  apply  it
+                    calibration  =  newCalibration;
+                    saveCalibration();
+                    updateCalibrationTicks();
+                    drawHistogram();
+                }  catch  (e)  {
+                    addDebug(`Invalid  calibration  format:  ${e.message}`);
+                }
             }
-          }
-        }
-        ctx.stroke();
 
-        ctx.fillStyle = 'rgb(128, 128, 128)';
-        ctx.font = '10px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-
-        for (let channel in energyLabels) {
-          ctx.fillText(energyLabels[channel].toString(), channel, height - xAxisHeight + 8);
-        }
-
-        ctx.textAlign = 'left';
-        const scaleAndVersionText = `${yScale} | ${CACHE_VERSION}`;
-        ctx.fillText(scaleAndVersionText, 8, 8);
-      }
-
-      function calculateBinHeight(bin, maxValue, height) {
-        let binHeight = maxValue > 0 ? (Math.sqrt(bin) / Math.sqrt(maxValue) * height) : 0;
-        if (yScale === 'lin') {
-          binHeight = maxValue > 0 ? (bin / maxValue * height) : 0;
-        }
-        if (yScale === 'log') {
-          binHeight = maxValue > 1 ? (Math.log10(bin + 1) / Math.log10(maxValue + 1) * height) : 0;
-        }
-
-        return binHeight;
-      }
-
-      function formatCps(cps) {
-        if (cps < 10) {
-          cps = cps.toFixed(3);
-        } else if (cps < 100) {
-          cps = cps.toFixed(2);
-        } else if (cps < 1000) {
-          cps = cps.toFixed(1);
-        } else {
-          cps = Math.round(cps);
-        }
-        return cps;
-      }
-
-      function drawStats(totalRecentCounts, totalRecentDuration) {
-        let averageCps = totalTime > 0 ? (totalCounts / totalTime) : 0;
-        averageCps = formatCps(averageCps);
-        let recentCps = totalRecentDuration > 0 ? (totalRecentCounts / totalRecentDuration) : 0;
-        recentCps = Math.round(recentCps);
-        let statsText = '';
-        if (window.matchMedia("(orientation: portrait)").matches) {
-          statsText = `time: ${totalTime.toFixed(1)} s | counts: ${totalCounts} | ~cps: ${averageCps}\ncp1s: ${recentCps}`;
-        } else {
-          statsText = `time: ${totalTime.toFixed(1)} s | counts: ${totalCounts} | ~cps: ${averageCps} | cp1s: ${recentCps}`;
-        }
-        document.querySelector('.stats-text').innerText = statsText;
-      }
-
-      function drawHistogram() {
-        const canvas = document.getElementById('histogram');
-        const ctx = canvas.getContext('2d');
-        const width = histogram.length;
-        const height = canvas.height;
-
-        if (height === 0) return;
-
-        // cleanup
-        canvas.width = width;
-        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-        ctx.fillRect(0, 0, width, height);
-
-        // constraints
-        let maxValue = 0;
-        for (const bin of histogram) {
-          if (bin > maxValue) {
-            maxValue = bin;
-          }
-        }
-        const overheadFactor = 1.1;
-        if (yScale === 'sqrt') {
-          maxValue *= overheadFactor * overheadFactor;
-        } else if (yScale === 'log') {
-          maxValue *= Math.pow(maxValue, overheadFactor - 1);
-        } else {
-          maxValue *= overheadFactor;
-        }
-
-        // all counts
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
-        ctx.beginPath();
-        const xAxisHeight = 20;
-        for (var x = 0; x < histogram.length; x++) {
-          const bin = histogram[x];
-          const binHeight = calculateBinHeight(bin, maxValue, height - xAxisHeight);
-
-          ctx.moveTo(x - 0.5, height - xAxisHeight);
-          ctx.lineTo(x - 0.5, height - xAxisHeight - binHeight);
-        }
-        ctx.stroke();
-
-        // recent counts
-        let totalRecentCounts = 0;
-        let totalRecentDuration = 0;
-        for (let i = 0; i < histogramLatestChangesHistory.length; i++) {
-          const alpha = (i + 1) / histogramLatestChangesHistory.length;
-          ctx.strokeStyle = `rgba(255, 0, 0, ${alpha})`;
-          ctx.beginPath();
-          const histogramLatestChanges = histogramLatestChangesHistory[i];
-          for (const binIndex in histogramLatestChanges) {
-            if (binIndex === 'duration') {
-              totalRecentDuration += histogramLatestChanges[binIndex];
-              continue;
+            function  saveHistogramData()  {
+                if  (totalTime  >  0)  {
+                    const  data  =  {
+                        histogram:  histogram,
+                        totalTime:  totalTime,
+                        totalCounts:  totalCounts
+                    };
+                    localStorage.setItem('mca_histogram_data',  JSON.stringify(data));
+                }
             }
-            totalRecentCounts += histogramLatestChanges[binIndex];
-            const binHeight = calculateBinHeight(histogram[binIndex], maxValue, height - xAxisHeight);
-            ctx.moveTo(binIndex - 0.5, height - xAxisHeight);
-            ctx.lineTo(binIndex - 0.5, height - xAxisHeight - binHeight);
-          }
-          ctx.stroke();
-        }
 
-        drawEnergyTicks(ctx, width, height, xAxisHeight);
-        drawCursor(ctx, height, xAxisHeight);
-        drawStats(totalRecentCounts, totalRecentDuration);
-      }
+            function  loadHistogramData()  {
+                const  savedData  =  localStorage.getItem('mca_histogram_data');
+                if  (savedData)  {
+                    try  {
+                        const  data  =  JSON.parse(savedData);
+                        if  (data.histogram  &&  Array.isArray(data.histogram)  &&  data.histogram.length  >  0)  {
+                            channelCountInput.value  =  data.histogram.length;
+                            histogram  =  data.histogram;
+                            totalTime  =  data.totalTime  ||  0;
+                            totalCounts  =  data.totalCounts  ||  0;
+                        }
+                    }  catch  (e)  {
+                        addDebug(`Error  loading  histogram  data  from  local  storage:  ${e}`);
+                        localStorage.removeItem('mca_histogram_data');
+                    }
+                }
+            }
 
-      function drawCursor(ctx, height, xAxisHeight) {
-        if (cursorChannel === null) return;
+            function  clearHistogramData()  {
+                localStorage.removeItem('mca_histogram_data');
+            }
 
-        const energy = channelToEnergy(cursorChannel);
 
-        ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(cursorChannel + 0.5, 32);
-        ctx.lineTo(cursorChannel + 0.5, height - xAxisHeight);
-        ctx.stroke();
+            //  prevent  screen  from  sleeping
+            function  updateWakeLockIndicator()  {
+                if  (wakeLock)  {
+                    wakeLockIndicator.classList.add('active');
+                }  else  {
+                    wakeLockIndicator.classList.remove('active');
+                }
+            }
 
-        ctx.fillStyle = 'rgba(0, 255, 255, 1)';
-        ctx.font = '10px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        const label = `${energy.toFixed(0)}`;
-        ctx.fillText(label, cursorChannel, 20);
-      }
+            async  function  acquireWakeLock()  {
+                if  (wakeLock  !==  undefined)  {
+                    return;
+                }
 
-      // startup
-      loadSettings();
-      loadHistogramData();
-      loadCalibration();
-      resizeCanvases();
-      updateCalibrationTicks();
-      drawHistogram();
-    }());
-  </script>
+                try  {
+                    wakeLock  =  await  navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release',  ()  =>  {
+                        wakeLock  =  undefined;
+                        updateWakeLockIndicator();
+                    });
+                    updateWakeLockIndicator();
+                }  catch  (err)  {
+                    //  The  request  failed,  likely  due  to  a  system  setting  (e.g.,  low  battery)
+                    addDebug(`Error  acquiring  wake  lock:  ${err}`);
+                }
+            }
+
+            //  toggle  y  scale
+            function  toggleYScale()  {
+                if  (yScale  ===  'sqrt')  {
+                    yScale  =  'log';
+                }  else  if  (yScale  ===  'log')  {
+                    yScale  =  'lin';
+                }  else  {
+                    yScale  =  'sqrt';
+                }
+                drawHistogram();
+            }
+
+            //  reset  histogram
+            function  resetHistogram(force)  {
+                if  (!force  &&  !confirm('Are  you  sure  you  want  to  reset  the  histogram?  All  collected  data  will  be  lost.'))  {
+                    return;
+                }
+                const  channels  =  parseInt(channelCountInput.value);
+                histogram  =  new  Array(channels).fill(0);
+                histogramLatestChangesHistory  =  [];
+                totalTime  =  0;
+                totalCounts  =  0;
+                clearHistogramData();
+                updateCalibrationTicks();
+                drawHistogram();
+            }
+
+            //  handle  channel  count  change
+            function  handleChannelCountChange()  {
+                const  newChannels  =  parseInt(channelCountInput.value);
+                if  (totalCounts  >  0  &&  newChannels  !==  histogram.length  &&  !confirm('Are  you  sure  you  want  to  reset  the  histogram?  All  collected  data  will  be  lost.'))  {
+                    channelCountInput.value  =  histogram.length;
+                    return;
+                }
+                saveSettings();
+                resetHistogram(true);
+            }
+
+            //  export  data  to  csv
+            function  exportData()  {
+                const  utcDatetime  =  new  Date().toISOString().split('.')[0].replace(/[:]/g,  '-')  +  'Z';
+                const  defaultFilename  =  `mca-data-${utcDatetime}`;
+                const  filename  =  prompt('Enter  filename  for  export:',  defaultFilename);
+
+                if  (filename  ===  null)  {
+                    return;
+                }
+
+                if  (!filename)  {
+                    return;
+                }
+
+                let  csvContent  =  `Channel,Counts  (TotalTime=${totalTime.toFixed(1)}s)\n`;
+                for  (let  i  =  0;  i  <  histogram.length;  i++)  {
+                    csvContent  +=  `${i},${histogram[i]}\n`;
+                }
+                const  blob  =  new  Blob([csvContent],  {  type:  'text/csv'  });
+                const  url  =  URL.createObjectURL(blob);
+                const  a  =  document.createElement('a');
+                a.href  =  url;
+                a.download  =  `${filename}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            //  enable/disable  controls
+            function  setControlsEnabled(isRecording)  {
+                audioInputSelect.disabled  =  isRecording;
+                startButton.disabled  =  isRecording;
+                resetButton.disabled  =  isRecording;
+                exportButton.disabled  =  isRecording;
+                lldInput.disabled  =  isRecording;
+                uldInput.disabled  =  isRecording;
+                channelCountInput.disabled  =  isRecording;
+                stopButton.disabled  =  !isRecording;
+            }
+
+            //  canvas  sizing
+            function  resizeCanvases()  {
+                const  oscilloscope  =  document.getElementById('oscilloscope');
+                const  histogram  =  document.getElementById('histogram');
+                const  oscilloscopeWrapper  =  document.querySelector('.waveform');
+                const  histogramWrapper  =  document.querySelector('.spectrum');
+
+                oscilloscope.width  =  oscilloscopeWrapper.clientWidth;
+                oscilloscope.height  =  oscilloscopeWrapper.clientHeight;
+
+                histogram.width  =  parseInt(channelCountInput.value);
+                histogram.height  =  histogramWrapper.clientHeight;
+            }
+
+            //  start/stop  audio  capturing
+            async  function  startProcessing()  {
+                if  (audioContext)  {
+                    addDebug(`ERROR:  Start  click  while  audio  context  is  present`);
+                    return;
+                }
+
+                const  audioSource  =  audioInputSelect.value  ||  undefined;
+                if  (!audioSource)  {
+                    addDebug(`ERROR:  No  available  audio  source`);
+                    return;
+                }
+
+                setControlsEnabled(true);
+
+                audioContext  =  new  AudioContext();
+                const  constraints  =  {
+                    audio:  {
+                        deviceId:  {  exact:  audioSource  },
+                        echoCancellation:  false,
+                        autoGainControl:  false,
+                        noiseSuppression:  false,
+                        sampleRate:  SAMPLE_RATE
+                    },
+                    video:  false
+                };
+                navigator.mediaDevices.getUserMedia(constraints)
+                    .then(stream  =>  {
+                        const  microphone  =  audioContext.createMediaStreamSource(stream);
+                        scriptProcessor  =  audioContext.createScriptProcessor(INPUT_BUFFER_SIZE,  1,  1);
+                        scriptProcessor.onaudioprocess  =  scriptProcessorEventHandler;
+                        microphone.connect(scriptProcessor);
+                        scriptProcessor.connect(audioContext.destination);
+
+                        inputAudioTrack  =  stream.getAudioTracks()[0];
+                        inputAudioTrack.addEventListener('ended',  onInputAudioTrackEnded);
+                    })
+                    .catch(e  =>  {
+                        addDebug(`ERROR:  Unable  to  start  media  -  ${e}`);
+                        setControlsEnabled(false);
+                    });
+
+                await  acquireWakeLock();
+            }
+
+            async  function  stopProcessing()  {
+                if  (!audioContext)  {
+                    addDebug(`ERROR:  No  audio  context  while  stopping`);
+                    return;
+                }
+
+                if  (scriptProcessor)  {
+                    scriptProcessor.onaudioprocess  =  undefined;
+                    scriptProcessor  =  undefined;
+                }
+
+                if  (inputAudioTrack)  {
+                    inputAudioTrack.removeEventListener('ended',  onInputAudioTrackEnded);
+                    inputAudioTrack  =  undefined;
+                }
+
+                audioContext.close();
+                audioContext  =  undefined;
+                setControlsEnabled(false);
+
+                if  (wakeLock)  {
+                    await  wakeLock.release();
+                }
+
+                histogramLatestChangesHistory  =  [];
+                drawHistogram();
+            }
+
+            function  onInputAudioTrackEnded()  {
+                addDebug(`INFO:  Audio  input  stream  ended`);
+                stopProcessing();
+            }
+
+            //  audio  (pulse)  processing
+            function  scriptProcessorEventHandler(audioProcessingEvent)  {
+                const  inputBuffer  =  audioProcessingEvent.inputBuffer;
+                processAudioData(inputBuffer);
+                drawOscilloscope(inputBuffer);
+                drawHistogram();
+            }
+
+            let  currentFrontPoints  =  0;
+            let  prevValue  =  0;
+            let  frontStartValue  =  0;
+            function  processAudioData(inputBuffer)  {
+                const  inputChannelData  =  inputBuffer.getChannelData(0);
+                const  minFrontPoints  =  MIN_FRONT_POINTS  *  inputBuffer.sampleRate  /  SAMPLE_RATE;
+                const  maxFrontPoints  =  MAX_FRONT_POINTS  *  inputBuffer.sampleRate  /  SAMPLE_RATE;
+                if  (inputChannelData)  {
+                    const  pulses  =  [];
+                    let  allZeros  =  true;
+                    for  (i  =  0;  i  <  inputChannelData.length;  i++)  {
+                        if  (inputChannelData[i]  !==  0)  {
+                            allZeros  =  false;
+                        }
+
+                        const  currentValue  =  inputChannelData[i]  +  1;  //  from  0  to  2
+                        if  (currentValue  >  prevValue)  {
+                            if  (currentFrontPoints  ===  0)  {
+                                frontStartValue  =  prevValue;
+                            }
+
+                            currentFrontPoints++;
+                        }  else  {
+                            if  (currentFrontPoints  >=  minFrontPoints  &&  currentFrontPoints  <=  maxFrontPoints)  {
+                                pulses.push(prevValue  -  frontStartValue);
+                            }
+
+                            frontStartValue  =  0;
+                            currentFrontPoints  =  0;
+                        }
+
+                        prevValue  =  currentValue;
+                    }
+
+                    if  (allZeros)  {
+                        //  likely  no  input  signal,  skip  processing
+                        //  happens  a  lot  on  iOS  when  PWA  is  in  background
+                        histogramLatestChangesHistory.shift();
+                        return;
+                    }
+
+                    totalTime  +=  inputBuffer.duration;
+                    const  lld  =  parseFloat(lldInput.value);
+                    const  uld  =  parseFloat(uldInput.value);
+                    const  histogramLatestChanges  =  {};
+                    for  (pulse  of  pulses)  {
+                        if  (pulse  <  lld)  {
+                            continue;
+                        }
+
+                        const  ratio  =  Math.min(pulse  /  uld,  1);
+                        const  bin  =  Math.floor(ratio  *  (histogram.length  -  1));
+                        histogram[bin]++;
+                        totalCounts++;
+                        if  (!histogramLatestChanges[bin])  {
+                            histogramLatestChanges[bin]  =  1;
+                        }  else  {
+                            histogramLatestChanges[bin]++;
+                        }
+                    }
+                    histogramLatestChanges.duration  =  inputBuffer.duration;
+                    histogramLatestChangesHistory.push(histogramLatestChanges);
+                    if  (histogramLatestChangesHistory.length  >  Math.ceil(inputBuffer.sampleRate  /  INPUT_BUFFER_SIZE))  {
+                        histogramLatestChangesHistory.shift();
+                    }
+                }
+            }
+
+            //  rendering  of  data
+            function  drawOscilloscope(inputBuffer)  {
+                const  canvas  =  document.getElementById('oscilloscope');
+                const  ctx  =  canvas.getContext('2d');
+                const  width  =  canvas.width;
+                const  height  =  canvas.height;
+                const  xScale  =  3;
+
+                if  (width  ===  0  ||  height  ===  0)  return;
+
+                const  inputChannelData  =  inputBuffer.getChannelData(0).slice(-Math.min(width  *  xScale,  inputBuffer.length));
+
+                ctx.fillStyle  =  'rgba(0,  0,  0,  0.5)';
+                ctx.fillRect(0,  0,  width,  height);
+                ctx.lineWidth  =  1;
+                ctx.strokeStyle  =  'white';
+                ctx.beginPath();
+                const  sliceWidth  =  width  /  inputChannelData.length;
+                let  x  =  0;
+                for  (let  i  =  0;  i  <  inputChannelData.length;  i++)  {
+                    const  isNegative  =  inputChannelData[i]  <  0;
+                    let  absValue  =  Math.abs(inputChannelData[i]);
+                    let  scaledValue  =  Math.sqrt(absValue)  /  Math.sqrt(1);
+                    if  (yScale  ===  'lin')  {
+                        scaledValue  =  absValue;
+                    }
+                    if  (yScale  ===  'log')  {
+                        scaledValue  =  Math.log10(absValue  *  200  +  1)  /  Math.log10(201);
+                    }
+                    if  (isNegative)  {
+                        scaledValue  =  -scaledValue;
+                    }
+
+                    const  v  =  scaledValue  +  1;  //  from  0  to  2
+                    const  y  =  height  -  v  *  (height  /  2);
+
+                    if  (i  ===  0)  {
+                        ctx.moveTo(x,  y  -  0.5);
+                    }  else  {
+                        ctx.lineTo(x,  y  -  0.5);
+                    }
+
+                    x  +=  sliceWidth;
+                }
+
+                ctx.stroke();
+            }
+
+            function  channelToEnergy(channel)  {
+                let  energy  =  0;
+                for  (let  i  =  0;  i  <  calibration.length;  i++)  {
+                    energy  +=  calibration[i]  *  Math.pow(channel,  i);
+                }
+
+                return  energy;
+            }
+
+            function  updateCalibrationTicks()  {
+                calibrationTicks  =  {};
+                if  (calibration.length  <  2)  {
+                    calibration  =  [0,  1];
+                }
+
+                const  energyStep  =  25;
+                const  energyLeftBound  =  channelToEnergy(0);
+                let  energyTick  =  0;
+                if  (energyLeftBound  >  0)  {
+                    energyTick  =  Math.ceil(energyLeftBound  /  energyStep)  *  energyStep;
+                }
+
+                for  (let  i  =  0;  i  <  histogram.length  -  1;  i++)  {
+                    const  currentChEnergy  =  channelToEnergy(i);
+                    const  nextChEnergy  =  channelToEnergy(i  +  1);
+                    if  (currentChEnergy  <=  energyTick  &&  nextChEnergy  >=  energyTick)  {
+                        if  ((energyTick  -  currentChEnergy)  <  (nextChEnergy  -  energyTick))  {
+                            calibrationTicks[i]  =  energyTick;
+                        }  else  {
+                            calibrationTicks[i  +  1]  =  energyTick;
+                        }
+
+                        energyTick  +=  energyStep;
+                    }
+                }
+            }
+
+            function  drawEnergyTicks(ctx,  width,  height,  xAxisHeight)  {
+                ctx.lineWidth  =  1;
+                ctx.strokeStyle  =  'rgb(128,  128,  128)';
+                ctx.beginPath();
+                ctx.moveTo(0,  height  -  xAxisHeight  +  0.5);
+                ctx.lineTo(width,  height  -  xAxisHeight  +  0.5);
+
+                const  energyLabels  =  {};
+                for  (let  channel  =  0;  channel  <  width;  channel++)  {
+                    if  (channel  in  calibrationTicks)  {
+                        const  energy  =  calibrationTicks[channel];
+                        if  (energy  %  100  ===  0)  {
+                            //  Major  tick
+                            ctx.moveTo(channel  -  0.5,  height  -  xAxisHeight);
+                            ctx.lineTo(channel  -  0.5,  height  -  xAxisHeight  +  6);
+                            if  (energy  %  200  ===  0)  {
+                                energyLabels[channel]  =  energy;
+                            }
+                        }  else  if  (energy  %  50  ===  0)  {
+                            //  Minor  tick
+                            ctx.moveTo(channel  -  0.5,  height  -  xAxisHeight);
+                            ctx.lineTo(channel  -  0.5,  height  -  xAxisHeight  +  3);
+                        }
+                    }
+                }
+                ctx.stroke();
+
+                ctx.fillStyle  =  'rgb(128,  128,  128)';
+                ctx.font  =  '10px  monospace';
+                ctx.textAlign  =  'center';
+                ctx.textBaseline  =  'top';
+
+                for  (let  channel  in  energyLabels)  {
+                    ctx.fillText(energyLabels[channel].toString(),  channel,  height  -  xAxisHeight  +  8);
+                }
+
+                ctx.textAlign  =  'left';
+                const  scaleAndVersionText  =  `${yScale}  |  ${CACHE_VERSION}`;
+                ctx.fillText(scaleAndVersionText,  8,  8);
+            }
+
+            function  calculateBinHeight(bin,  maxValue,  height)  {
+                let  binHeight  =  maxValue  >  0  ?  (Math.sqrt(bin)  /  Math.sqrt(maxValue)  *  height)  :  0;
+                if  (yScale  ===  'lin')  {
+                    binHeight  =  maxValue  >  0  ?  (bin  /  maxValue  *  height)  :  0;
+                }
+                if  (yScale  ===  'log')  {
+                    binHeight  =  maxValue  >  1  ?  (Math.log10(bin  +  1)  /  Math.log10(maxValue  +  1)  *  height)  :  0;
+                }
+
+                return  binHeight;
+            }
+
+            function  formatCps(cps)  {
+                if  (cps  <  10)  {
+                    cps  =  cps.toFixed(3);
+                }  else  if  (cps  <  100)  {
+                    cps  =  cps.toFixed(2);
+                }  else  if  (cps  <  1000)  {
+                    cps  =  cps.toFixed(1);
+                }  else  {
+                    cps  =  Math.round(cps);
+                }
+                return  cps;
+            }
+
+            function  drawStats(totalRecentCounts,  totalRecentDuration)  {
+                let  averageCps  =  totalTime  >  0  ?  (totalCounts  /  totalTime)  :  0;
+                averageCps  =  formatCps(averageCps);
+                let  recentCps  =  totalRecentDuration  >  0  ?  (totalRecentCounts  /  totalRecentDuration)  :  0;
+                recentCps  =  Math.round(recentCps);
+                let  statsText  =  '';
+                if  (window.matchMedia("(orientation:  portrait)").matches)  {
+                    statsText  =  `time:  ${totalTime.toFixed(1)}  s  |  counts:  ${totalCounts}  |  ~cps:  ${averageCps}\ncp1s:  ${recentCps}`;
+                }  else  {
+                    statsText  =  `time:  ${totalTime.toFixed(1)}  s  |  counts:  ${totalCounts}  |  ~cps:  ${averageCps}  |  cp1s:  ${recentCps}`;
+                }
+                document.querySelector('.stats-text').innerText  =  statsText;
+            }
+
+            function  drawHistogram()  {
+                const  canvas  =  document.getElementById('histogram');
+                const  ctx  =  canvas.getContext('2d');
+                const  width  =  histogram.length;
+                const  height  =  canvas.height;
+
+                if  (height  ===  0)  return;
+
+                //  cleanup
+                canvas.width  =  width;
+                ctx.fillStyle  =  'rgba(0,  0,  0,  1)';
+                ctx.fillRect(0,  0,  width,  height);
+
+                //  constraints
+                let  maxValue  =  0;
+                for  (const  bin  of  histogram)  {
+                    if  (bin  >  maxValue)  {
+                        maxValue  =  bin;
+                    }
+                }
+                const  overheadFactor  =  1.1;
+                if  (yScale  ===  'sqrt')  {
+                    maxValue  *=  overheadFactor  *  overheadFactor;
+                }  else  if  (yScale  ===  'log')  {
+                    maxValue  *=  Math.pow(maxValue,  overheadFactor  -  1);
+                }  else  {
+                    maxValue  *=  overheadFactor;
+                }
+
+                //  all  counts
+                ctx.lineWidth  =  1;
+                ctx.strokeStyle  =  'rgba(255,  255,  255,  1)';
+                ctx.beginPath();
+                const  xAxisHeight  =  20;
+                for  (var  x  =  0;  x  <  histogram.length;  x++)  {
+                    const  bin  =  histogram[x];
+                    const  binHeight  =  calculateBinHeight(bin,  maxValue,  height  -  xAxisHeight);
+
+                    ctx.moveTo(x  -  0.5,  height  -  xAxisHeight);
+                    ctx.lineTo(x  -  0.5,  height  -  xAxisHeight  -  binHeight);
+                }
+                ctx.stroke();
+
+                //  recent  counts
+                let  totalRecentCounts  =  0;
+                let  totalRecentDuration  =  0;
+                for  (let  i  =  0;  i  <  histogramLatestChangesHistory.length;  i++)  {
+                    const  alpha  =  (i  +  1)  /  histogramLatestChangesHistory.length;
+                    ctx.strokeStyle  =  `rgba(255,  0,  0,  ${alpha})`;
+                    ctx.beginPath();
+                    const  histogramLatestChanges  =  histogramLatestChangesHistory[i];
+                    for  (const  binIndex  in  histogramLatestChanges)  {
+                        if  (binIndex  ===  'duration')  {
+                            totalRecentDuration  +=  histogramLatestChanges[binIndex];
+                            continue;
+                        }
+                        totalRecentCounts  +=  histogramLatestChanges[binIndex];
+                        const  binHeight  =  calculateBinHeight(histogram[binIndex],  maxValue,  height  -  xAxisHeight);
+                        ctx.moveTo(binIndex  -  0.5,  height  -  xAxisHeight);
+                        ctx.lineTo(binIndex  -  0.5,  height  -  xAxisHeight  -  binHeight);
+                    }
+                    ctx.stroke();
+                }
+
+                drawEnergyTicks(ctx,  width,  height,  xAxisHeight);
+                drawCursor(ctx,  height,  xAxisHeight);
+                drawStats(totalRecentCounts,  totalRecentDuration);
+            }
+
+            function  drawCursor(ctx,  height,  xAxisHeight)  {
+                if  (cursorChannel  ===  null)  return;
+
+                const  energy  =  channelToEnergy(cursorChannel);
+
+                ctx.strokeStyle  =  'rgba(0,  255,  255,  0.8)';
+                ctx.lineWidth  =  1;
+                ctx.beginPath();
+                ctx.moveTo(cursorChannel  +  0.5,  32);
+                ctx.lineTo(cursorChannel  +  0.5,  height  -  xAxisHeight);
+                ctx.stroke();
+
+                ctx.fillStyle  =  'rgba(0,  255,  255,  1)';
+                ctx.font  =  '10px  monospace';
+                ctx.textAlign  =  'center';
+                ctx.textBaseline  =  'top';
+                const  label  =  `${energy.toFixed(0)}`;
+                ctx.fillText(label,  cursorChannel,  20);
+            }
+
+            //  startup
+            loadSettings();
+            loadHistogramData();
+            loadCalibration();
+            resizeCanvases();
+            updateCalibrationTicks();
+            drawHistogram();
+        }());
+    </script>
 </body>
 
 </html>
