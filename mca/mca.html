@@ -378,6 +378,8 @@
       window.AudioContext = window.AudioContext || window.webkitAudioContext;
       let isMinimized = false;
       let audioContext = undefined;
+      let scriptProcessor = undefined;
+      let inputAudioTrack = undefined;
       let wakeLock = undefined;
       let histogram = new Array(parseInt(channelCountInput.value)).fill(0);
       let histogramLatestChangesHistory = [];
@@ -695,23 +697,13 @@
         navigator.mediaDevices.getUserMedia(constraints)
           .then(stream => {
             const microphone = audioContext.createMediaStreamSource(stream);
-            const scriptProcessor = audioContext.createScriptProcessor(INPUT_BUFFER_SIZE, 1, 1);
-            scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
-              const inputBuffer = audioProcessingEvent.inputBuffer;
-              processAudioData(inputBuffer);
-              drawOscilloscope(inputBuffer);
-              drawHistogram();
-              if (Math.floor(totalTime) % 10 === 0) {
-                saveHistogramData();
-              }
-            };
+            scriptProcessor = audioContext.createScriptProcessor(INPUT_BUFFER_SIZE, 1, 1);
+            scriptProcessor.onaudioprocess = scriptProcessorEventHandler;
             microphone.connect(scriptProcessor);
             scriptProcessor.connect(audioContext.destination);
 
-            stream.getAudioTracks()[0].addEventListener('ended', () => {
-              addDebug(`INFO: Audio input stream ended`);
-              stopProcessing();
-            });
+            inputAudioTrack = stream.getAudioTracks()[0];
+            inputAudioTrack.addEventListener('ended', onInputAudioTrackEnded);
           })
           .catch(e => {
             addDebug(`ERROR: Unable to start media - ${e}`);
@@ -727,6 +719,16 @@
           return;
         }
 
+        if (scriptProcessor) {
+          scriptProcessor.onaudioprocess = undefined;
+          scriptProcessor = undefined;
+        }
+
+        if (inputAudioTrack) {
+          inputAudioTrack.removeEventListener('ended', onInputAudioTrackEnded);
+          inputAudioTrack = undefined;
+        }
+
         audioContext.close();
         audioContext = undefined;
         setControlsEnabled(false);
@@ -739,7 +741,23 @@
         drawHistogram();
       }
 
+      function onInputAudioTrackEnded() {
+        addDebug(`INFO: Audio input stream ended`);
+        stopProcessing();
+      }
+
       // audio (pulse) processing
+      function scriptProcessorEventHandler(audioProcessingEvent) {
+        const inputBuffer = audioProcessingEvent.inputBuffer;
+        processAudioData(inputBuffer);
+        drawOscilloscope(inputBuffer);
+        drawHistogram();
+
+        if (Math.floor(totalTime) % 10 === 0) {
+          saveHistogramData();
+        }
+      }
+
       let currentFrontPoints = 0;
       let prevValue = 0;
       let frontStartValue = 0;
